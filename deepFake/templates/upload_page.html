@@ -1,0 +1,12 @@
+<h1>Upload Media</h1>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+</form>
+<h2>Uploaded Files</h2>
+<ul>
+    {% for media in media_files %}
+    <li>{{ media.media_type }}: <a href="{{ media.file.url }}">{{ media.file.name }}</a></li>
+    {% endfor %}
+</ul>
