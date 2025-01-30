@@ -1,12 +1,42 @@
 <h1>Upload Media</h1>
-<form method="post" enctype="multipart/form-data">
+<form id="image-upload-form" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit">Upload</button>
 </form>
+
 <h2>Uploaded Files</h2>
 <ul>
     {% for media in media_files %}
     <li>{{ media.media_type }}: <a href="{{ media.file.url }}">{{ media.file.name }}</a></li>
     {% endfor %}
 </ul>
+
+<div id="response"></div> <!-- This is where the response from the server will be shown -->
+
+<script>
+  document.getElementById('image-upload-form').addEventListener('submit', function (e) {
+    e.preventDefault(); // Prevent default form submission
+
+    const formData = new FormData(this); // Collect form data, including file
+
+    fetch('/api/image/', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}', // Include the CSRF token
+      },
+    })
+      .then(response => response.json())
+      .then(data => {
+        const resultDiv = document.getElementById('response');
+        resultDiv.innerHTML = `
+          <p>Label: ${data.label}</p>
+          <p>Confidence: ${data.confidence}</p>
+        `;
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+  });
+</script>
