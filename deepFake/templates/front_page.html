@@ -1,2 +1,14 @@
-<h1>Welcome to Media Manager</h1>
-<a href="/upload/">Upload Media</a>
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-center min-h-screen form-container">
+    <div class="w-full max-w-md p-8 space-y-6 bg-gray-800 rounded shadow-lg">
+      <h2 class="text-center text-3xl font-extrabold text-white">
+        Welcome to Media Manager
+      </h2>
+        <a class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600" href="/upload/">Upload Media</a>
+     
+    </div>
+  </div>
+{% endblock %}

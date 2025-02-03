@@ -18,7 +18,35 @@ import imagehash
 from PIL import Image
 from PIL.ExifTags import TAGS
 import subprocess
+from .forms import UserLoginForm, UserRegistrationForm
 
+def user_login_view(request):
+    if request.method == 'POST':
+        form = UserLoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(request, username=username, password=password)
+            if user:
+                login(request, user)
+                messages.success(request, "Logged in successfully!")
+                return redirect('home')
+            else:
+                messages.error(request, "Invalid credentials")
+    else:
+        form = UserLoginForm()
+    return render(request, 'login.html', {'form': form})
+
+def user_register_view(request):
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            form.save()  # Assumes your registration form handles user creation.
+            messages.success(request, "Registration successful! Please log in.")
+            return redirect('login')
+    else:
+        form = UserRegistrationForm()
+    return render(request, 'register.html', {'form': form})
 def image_hashing(image_path):
     # Load the image
     original = Image.open(image_path)

@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+  <title>{% block title %}My Site{% endblock %}</title>
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+ 
+  
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div id="particles-js"></div>
+
+       {% block content %}{% endblock %}
+   <script src="http://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+   <!-- stats.js lib -->
+   <script src="http://threejs.org/examples/js/libs/stats.min.js"></script>
+   <script src="{% static 'particles.js' %}"></script>
+</body>
+</html>

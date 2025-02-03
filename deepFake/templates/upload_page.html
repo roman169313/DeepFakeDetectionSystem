@@ -1,18 +1,23 @@
-<h1>Upload Media</h1>
-<form id="image-upload-form" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Upload</button>
-</form>
+{% extends 'base.html' %}
+{% block title %}Upload Media{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto p-6 bg-white shadow-md rounded-md form-container">
+    <h1 class="text-2xl font-bold mb-4">Upload Media</h1>
+    <form id="image-upload-form" method="post" enctype="multipart/form-data" class="space-y-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Upload</button>
+    </form>
 
-<h2>Uploaded Files</h2>
-<ul>
-    {% for media in media_files %}
-    <li>{{ media.media_type }}: <a href="{{ media.file.url }}">{{ media.file.name }}</a></li>
-    {% endfor %}
-</ul>
+    <h2 class="text-xl font-semibold mt-6 mb-2">Uploaded Files</h2>
+    <ul class="list-disc list-inside space-y-1">
+        {% for media in media_files %}
+        <li>{{ media.media_type }}: <a href="{{ media.file.url }}" class="text-blue-500 hover:underline">{{ media.file.name }}</a></li>
+        {% endfor %}
+    </ul>
 
-<div id="response"></div> <!-- This is where the response from the server will be shown -->
+    <div id="response" class="mt-4 p-4 bg-gray-100 rounded"></div>
+</div>
 
 <script>
   document.getElementById('image-upload-form').addEventListener('submit', function (e) {
@@ -31,8 +36,8 @@
       .then(data => {
         const resultDiv = document.getElementById('response');
         resultDiv.innerHTML = `
-          <p>Label: ${data.label}</p>
-          <p>Confidence: ${data.confidence}</p>
+          <p class="text-green-600 font-semibold">Label: ${data.label}</p>
+          <p class="text-green-600 font-semibold">Confidence: ${data.confidence}</p>
         `;
       })
       .catch(error => {
@@ -40,3 +45,4 @@
       });
   });
 </script>
+{% endblock %}
