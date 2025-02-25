@@ -9,20 +9,24 @@
       </h2>
       
       <!-- Display messages if any -->
-      {% if messages %}
-        {% for message in messages %}
-          <div class="p-3 rounded text-white bg-{{ message.tags }}-500">
-            {{ message }}
-          </div>
+      
+  {% if form.errors %}
+    <div class="p-3 rounded bg-red-500 text-white">
+        {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+                <p>{{ error }}</p>
+            {% endfor %}
         {% endfor %}
-      {% endif %}
+    </div>
+{% endif %}
+
       
       <form method="POST">
         {% csrf_token %}
         <div class="rounded-md shadow-sm -space-y-px">
           <div class="mb-4">
-            <label for="id_name" class="sr-only">Name</label>
-            {{ form.name }}
+            <label for="id_name" class="sr-only">Username</label>
+            {{ form.username }}
           </div>
           <div class="mb-4">
             <label for="id_email" class="sr-only">Email</label>
@@ -30,7 +34,7 @@
           </div>
           <div class="mb-4">
             <label for="id_password" class="sr-only">Password</label>
-            {{ form.password }}
+            {{ form.password1 }}
           </div>
           <div class="mb-4">
             <label for="id_password2" class="sr-only">Confirm Password</label>

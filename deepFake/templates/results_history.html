@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="  min-h-screen flex items-center justify-center">
+    <div class="max-w-2xl p-8 bg-white shadow-md rounded-lg form-container">
+
+        <!-- Title -->
+        <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">Analysis History</h2>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
+                <thead class="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                    <tr>
+                        <th class="py-3 px-4 text-left">File</th>
+                        <th class="py-3 px-4 text-left">Type</th>
+                        <th class="py-3 px-4 text-left">Prediction</th>
+                        <th class="py-3 px-4 text-left">Confidence</th>
+                        <th class="py-3 px-4 text-left">Date</th>
+                        <th class="py-3 px-4 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700">
+                    {% for result in results %}
+                    <tr class="border-b hover:bg-gray-100 transition">
+                        <td class="py-3 px-4">{{ result.media_file.file.name }}</td>
+                        <td class="py-3 px-4">{{ result.get_media_type_display }}</td>
+                        <td class="py-3 px-4">{{ result.prediction }}</td>
+                        <td class="py-3 px-4">{{ result.confidence|floatformat:2 }}%</td>
+                        <td class="py-3 px-4">{{ result.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="py-3 px-4 text-center">
+                            <a href="{% url 'result_detail' result.id %}" 
+                               class="bg-blue-500 text-white py-2 px-4 rounded-md text-sm font-semibold hover:bg-blue-700 transition">
+                                View Details
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-gray-500">No analysis results found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

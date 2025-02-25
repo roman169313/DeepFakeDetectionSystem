@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="  min-h-screen flex items-center justify-center">
+    <div class="max-w-md mx-auto p-8 bg-white shadow-md rounded-lg form-container">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Deepfake Detector</h1>
+        <p class="text-gray-600 mb-8 text-center">Upload an image to check for deepfake manipulation.</p>
+
+        
+    <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">Analysis Details</h2>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">{{ result.media_file.file.name }}</h5>
+            <p class="card-text">
+                <strong>Type:</strong> {{ result.get_media_type_display }}<br>
+                <strong>Prediction:</strong> {{ result.prediction }}<br>
+                <strong>Confidence:</strong> {{ result.confidence|floatformat:2 }}%<br>
+                <strong>Date:</strong> {{ result.uploaded_at|date:"Y-m-d H:i" }}
+            </p>
+            
+            {% if result.media_type == 'image' %}
+            <h5>Image Analysis</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <img src="/media/{{ result.ela_image }}" class="img-fluid" alt="ELA Analysis">
+                </div>
+                <div class="col-md-4">
+                    <img src="/media/{{ result.jpeg_image }}" class="img-fluid" alt="JPEG Analysis">
+                </div>
+                <div class="col-md-4">
+                    <img src="/media/{{ result.noise_image }}" class="img-fluid" alt="Noise Analysis">
+                </div>
+            </div>
+            {% elif result.media_type == 'audio' %}
+            <h5>Audio Analysis</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <img src="/media/{{ result.waveform_image }}" class="img-fluid" alt="Waveform">
+                </div>
+                <div class="col-md-6">
+                    <img src="/media/{{ result.spectrogram_image }}" class="img-fluid" alt="Spectrogram">
+                </div>
+            </div>
+            {% elif result.media_type == 'video' %}
+            <h5>Video Analysis</h5>
+            <img src="/media/{{ result.frame_analysis_image }}" class="img-fluid" alt="Frame Analysis">
+            {% endif %}
+            
+            <h5 class="mt-4">Metadata</h5>
+            <pre>{{ result.metadata|pprint }}</pre>
+        </div>
+    </div>
+    {% if result.id %}
+    <a href="{% url 'export_result_pdf' result.id %}">Download PDF</a>
+    <a href="{% url 'export_result_csv' result.id %}" class="btn btn-success">Download CSV</a>
+{% endif %}
+
+    <a href="{% url 'results_history' %}" class="btn btn-secondary mt-3">Back to History</a>
+
+     
+
+       
+    </div>
+</div>
+{% endblock %}

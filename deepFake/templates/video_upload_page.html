@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Deepfake Detection - Video{% endblock %}
+{% block content %}
+
+<div class="min-h-screen flex items-center justify-center">
+    <div class="max-w-md mx-auto p-8 bg-white shadow-md rounded-lg form-container">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Deepfake Detector - Video</h1>
+        <p class="text-gray-600 mb-8 text-center">Upload a video to check for deepfake manipulation.</p>
+
+        <form id="deepfake-upload-form" method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gradient-to-r hover:from-indigo-600 hover:to-pink-600 transition duration-300">
+                Analyze
+            </button>
+        </form>
+        <div id="results-container" class="mt-8 ">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Detection Results</h2>
+            <div id="wait" class="p-6 bg-gray-100 rounded-lg hidden">
+                <p class="text-gray-600">Analyzing...</p>
+            </div>
+            <div id="error" class="p-6 bg-red-100 text-red-500 font-medium rounded-lg hidden"></div>
+            <div id="response" class="p-6 bg-gray-100 rounded-lg hidden">
+                <h3 class="text-xl font-semibold mb-2">Metadata</h3>
+                <p id="metadata" class="bg-white p-4 rounded-lg shadow-sm"></p>
+
+                <h3 class="text-xl font-semibold mb-2">Frame Analysis</h3>
+                <img id="frame-analysis-image" src="" alt="Frame Analysis Image" class="w-full rounded-lg shadow-sm hidden">
+
+                <h3 class="text-xl font-semibold mb-2">Model Prediction</h3>
+                <p id="prediction" class="text-lg font-medium"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('deepfake-upload-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const form = this;
+        const formData = new FormData(form);
+        const resultsContainer = document.getElementById('results-container');
+        const wait = document.getElementById('wait');
+        const responseDiv = document.getElementById('response');
+        const errorDiv = document.getElementById('error');
+        const metadata = document.getElementById('metadata');
+        const frameImage = document.getElementById('frame-analysis-image');
+        const prediction = document.getElementById('prediction');
+
+        // resultsContainer.classList.add('hidden');
+        responseDiv.classList.add('hidden');
+        errorDiv.classList.add('hidden');
+        wait.classList.remove('hidden');
+
+        try {
+            const response = await fetch('/api/video/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP Error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            wait.classList.add('hidden');
+            responseDiv.classList.remove('hidden');
+            // resultsContainer.classList.remove('hidden');
+
+            metadata.textContent = JSON.stringify(data.metadata, null, 2);
+
+            if (data.frame_analysis_url) {
+                frameImage.src = data.frame_analysis_url;
+                frameImage.classList.remove('hidden');
+            }
+
+            prediction.textContent = `Label: ${data.label}, Confidence: ${data.confidence.toFixed(2)}`;
+        } catch (error) {
+            wait.classList.add('hidden');
+            errorDiv.textContent = `Error during analysis: ${error.message}`;
+            errorDiv.classList.remove('hidden');
+        }
+    });
+</script>
+
+{% endblock %}
