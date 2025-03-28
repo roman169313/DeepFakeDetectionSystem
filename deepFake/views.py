@@ -72,7 +72,7 @@ def user_detail(request, user_id):
     media=MediaFile.objects.filter(user=user)
     return render(request, 'user_details.html', {'media': media})
 def export_result_pdf(request, result_id):
-    result = get_object_or_404(MediaFile, user=request.user, id=result_id)
+    result = get_object_or_404(MediaFile,  id=result_id)
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="result_{result_id}.pdf"'
@@ -119,7 +119,7 @@ def export_result_pdf(request, result_id):
 
 @login_required
 def result_detail(request, result_id):
-    result = MediaFile.objects.filter(user=request.user, id=result_id).first()
+    result = MediaFile.objects.filter( id=result_id).first()
     if not result_id:
         return JsonResponse({"error": "Missing result_id"}, status=400)
     return render(request, 'result_detail.html', {'result': result})
@@ -275,13 +275,20 @@ def media_api_detail(request, pk):
         return JsonResponse({'error': 'Not found'}, status=404)
 def error_level_analysis(image_path, output_path):
     original = Image.open(image_path)
+    
+    # Convert image to RGB mode if it's in P mode
+    if original.mode == 'P':
+        original = original.convert('RGB')
+    
     recompressed_path = 'recompressed_image.jpg'
     original.save(recompressed_path, 'JPEG', quality=50)
+    
     recompressed = Image.open(recompressed_path)
     diff = ImageChops.difference(original, recompressed)
     diff = diff.convert("L")
     diff_np = np.array(diff)
     diff_np = np.log1p(diff_np)
+    
     plt.imshow(diff_np, cmap='hot')
     plt.savefig(output_path)
     plt.close()
@@ -315,109 +322,109 @@ def convert_ifd_rational(obj):
     elif isinstance(obj, Fraction):  # Handle single IFDRational values
         return float(obj)
     return obj
-def media_image(request):
-    if request.method == 'POST' and request.FILES.get('file'):
-        image_file = request.FILES['file']
+# def media_image(request):
+#     if request.method == 'POST' and request.FILES.get('file'):
+#         image_file = request.FILES['file']
 
-        # Handle both in-memory and temporary file uploads
-        if isinstance(image_file, TemporaryUploadedFile):
-            image_file_path = image_file.temporary_file_path()
-        else:
-            # Save the in-memory file manually
-            temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_uploads")
-            os.makedirs(temp_dir, exist_ok=True)
+#         # Handle both in-memory and temporary file uploads
+#         if isinstance(image_file, TemporaryUploadedFile):
+#             image_file_path = image_file.temporary_file_path()
+#         else:
+#             # Save the in-memory file manually
+#             temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_uploads")
+#             os.makedirs(temp_dir, exist_ok=True)
 
-            image_file_path = os.path.join(temp_dir, image_file.name)
-            with open(image_file_path, "wb") as f:
-                for chunk in image_file.chunks():
-                    f.write(chunk)
+#             image_file_path = os.path.join(temp_dir, image_file.name)
+#             with open(image_file_path, "wb") as f:
+#                 for chunk in image_file.chunks():
+#                     f.write(chunk)
 
-        # Get metadata
-        metadata = get_image_metadata(image_file_path)
-        metadata = {key: convert_ifd_rational(value) for key, value in metadata.items()}
+#         # Get metadata
+#         metadata = get_image_metadata(image_file_path)
+#         metadata = {key: convert_ifd_rational(value) for key, value in metadata.items()}
 
-        # Perform ELA
-        ela_image_path = os.path.join(settings.MEDIA_ROOT, 'ela_image.png')
-        error_level_analysis(image_file_path, ela_image_path)
+#         # Perform ELA
+#         ela_image_path = os.path.join(settings.MEDIA_ROOT, 'ela_image.png')
+#         error_level_analysis(image_file_path, ela_image_path)
 
-        # Perform JPEG compression analysis
-        jpeg_image_path = os.path.join(settings.MEDIA_ROOT, 'jpeg_image.png')
-        jpeg_compression_analysis(image_file_path, jpeg_image_path)
+#         # Perform JPEG compression analysis
+#         jpeg_image_path = os.path.join(settings.MEDIA_ROOT, 'jpeg_image.png')
+#         jpeg_compression_analysis(image_file_path, jpeg_image_path)
 
-        # Perform noise analysis
-        noise_image_path = os.path.join(settings.MEDIA_ROOT, 'noise_image.png')
-        noise_analysis(image_file_path, noise_image_path)
+#         # Perform noise analysis
+#         noise_image_path = os.path.join(settings.MEDIA_ROOT, 'noise_image.png')
+#         noise_analysis(image_file_path, noise_image_path)
 
-        # Get model prediction
-        image_label, image_confidence = check_fake_or_real(image_file_path)
+#         # Get model prediction
+#         image_label, image_confidence = check_fake_or_real(image_file_path)
 
-        # Create MediaFile instance (✅ CORRECTED)
-        media_file = MediaFile.objects.create(
-            user=request.user,
-            file=image_file,  # ✅ Ensure this correctly saves the uploaded file
-            media_type='image',
-            prediction=image_label,
-            confidence=float(image_confidence[0]),
-            metadata=metadata,
-            ela_image='ela_image.png',
-            jpeg_image='jpeg_image.png',
-            noise_image='noise_image.png'
-        )
+#         # Create MediaFile instance (✅ CORRECTED)
+#         media_file = MediaFile.objects.create(
+#             user=request.user,
+#             file=image_file,  # ✅ Ensure this correctly saves the uploaded file
+#             media_type='image',
+#             prediction=image_label,
+#             confidence=float(image_confidence[0]),
+#             metadata=metadata,
+#             ela_image='ela_image.png',
+#             jpeg_image='jpeg_image.png',
+#             noise_image='noise_image.png'
+#         )
 
-        # Prepare data to return
-        data = {
-            'metadata': metadata,
-            'ela_image_url': '/media/ela_image.png',
-            'jpeg_image_url': '/media/jpeg_image.png',
-            'noise_image_url': '/media/noise_image.png',
-            'label': image_label,
-            'confidence': float(image_confidence[0])
-        }
+#         # Prepare data to return
+#         data = {
+#             'metadata': metadata,
+#             'ela_image_url': '/media/ela_image.png',
+#             'jpeg_image_url': '/media/jpeg_image.png',
+#             'noise_image_url': '/media/noise_image.png',
+#             'label': image_label,
+#             'confidence': float(image_confidence[0])
+#         }
 
-        return JsonResponse(data)
+#         return JsonResponse(data)
 
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+#     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-def media_video(request):
-    if request.method == 'POST':
-        try:
-            video_file = request.FILES['file']
+# def media_video(request):
+#     if request.method == 'POST':
+#         try:
+#             video_file = request.FILES['file']
 
-            # Create a temporary file to store the uploaded video
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video:
-                for chunk in video_file.chunks():
-                    temp_video.write(chunk)
-                temp_video_path = temp_video.name
+#             # Create a temporary file to store the uploaded video
+#             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video:
+#                 for chunk in video_file.chunks():
+#                     temp_video.write(chunk)
+#                 temp_video_path = temp_video.name
             
-            print(f"Temporary Video Path: {temp_video_path}")
+#             print(f"Temporary Video Path: {temp_video_path}")
 
-            # Process the video
-            video_label, video_confidence = detect_video(temp_video_path)
+#             # Process the video
+#             video_label, video_confidence = detect_video(temp_video_path)
 
-            # Perform additional analysis (e.g., metadata extraction, frame analysis)
-            metadata = get_video_metadata(temp_video_path)
-            frame_analysis_path = analyze_video_frames(temp_video_path)
+#             # Perform additional analysis (e.g., metadata extraction, frame analysis)
+#             metadata = get_video_metadata(temp_video_path)
+#             frame_analysis_path = analyze_video_frames(temp_video_path)
 
-            # Create MediaFile instance (✅ CORRECTED)
-            media_file = MediaFile.objects.create(
-                user=request.user,
-                file=video_file,  # ✅ Ensuring correct file storage
-                media_type='video',
-                prediction=video_label,
-                confidence=float(video_confidence[0]),
-                metadata=metadata,
-                frame_analysis_image='video_frames/frame_0000.png'
-            )
+#             # Create MediaFile instance (✅ CORRECTED)
+#             media_file = MediaFile.objects.create(
+#                 user=request.user,
+#                 file=video_file,  # ✅ Ensuring correct file storage
+#                 media_type='video',
+#                 prediction=video_label,
+#                 confidence=float(video_confidence[0]),
+#                 metadata=metadata,
+#                 frame_analysis_image='video_frames/frame_0000.png'
+#             )
 
-            return JsonResponse({
-                'metadata': metadata,
-                'frame_analysis_url': f'/{frame_analysis_path}',
-                'label': video_label,
-                'confidence': float(video_confidence[0])
-            })
+#             return JsonResponse({
+#                 'metadata': metadata,
+#                 'frame_analysis_url': f'/{frame_analysis_path}',
+#                 'label': video_label,
+#                 'confidence': float(video_confidence[0])
+#             })
 
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=500)
 
 def get_video_metadata(video_path):
     # Use a library like ffmpeg or exiftool to extract video metadata
@@ -455,49 +462,49 @@ def analyze_video_frames(video_path):
     # Return the path to the first analyzed frame for display
     return os.path.join(output_dir, 'frame_0000.png')
 
-def media_audio(request):
-    if request.method == 'POST':
-        try:
-            audio_file = request.FILES['file']
+# def media_audio(request):
+#     if request.method == 'POST':
+#         try:
+#             audio_file = request.FILES['file']
 
-            # Create a temporary file to store the uploaded audio
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-                for chunk in audio_file.chunks():
-                    temp_audio.write(chunk)
-                temp_audio_path = temp_audio.name
+#             # Create a temporary file to store the uploaded audio
+#             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+#                 for chunk in audio_file.chunks():
+#                     temp_audio.write(chunk)
+#                 temp_audio_path = temp_audio.name
 
-            print(f"Temporary Audio Path: {temp_audio_path}")
+#             print(f"Temporary Audio Path: {temp_audio_path}")
 
-            # Process the audio
-            audio_label, audio_confidence = detect_audio(temp_audio_path)
+#             # Process the audio
+#             audio_label, audio_confidence = detect_audio(temp_audio_path)
 
-            # Perform additional analysis (e.g., waveform visualization, spectrogram)
-            waveform_path = visualize_waveform(temp_audio_path)
-            spectrogram_path = visualize_spectrogram(temp_audio_path)
+#             # Perform additional analysis (e.g., waveform visualization, spectrogram)
+#             waveform_path = visualize_waveform(temp_audio_path)
+#             spectrogram_path = visualize_spectrogram(temp_audio_path)
 
-            # Cleanup: Remove the temporary file after processing
-            os.remove(temp_audio_path)
+#             # Cleanup: Remove the temporary file after processing
+#             os.remove(temp_audio_path)
 
-            # Create MediaFile instance (✅ CORRECTED)
-            media_file = MediaFile.objects.create(
-                user=request.user,
-                file=audio_file,  # ✅ Ensuring correct file storage
-                media_type='audio',
-                prediction=audio_label,
-                confidence=float(audio_confidence[0]),
-                waveform_image='waveform.png',
-                spectrogram_image='spectrogram.png'
-            )
+#             # Create MediaFile instance (✅ CORRECTED)
+#             media_file = MediaFile.objects.create(
+#                 user=request.user,
+#                 file=audio_file,  # ✅ Ensuring correct file storage
+#                 media_type='audio',
+#                 prediction=audio_label,
+#                 confidence=float(audio_confidence[0]),
+#                 waveform_image='waveform.png',
+#                 spectrogram_image='spectrogram.png'
+#             )
 
-            return JsonResponse({
-                'waveform_url': f'/{waveform_path}',
-                'spectrogram_url': f'/{spectrogram_path}',
-                'label': audio_label,
-                'confidence': float(audio_confidence[0])
-            })
+#             return JsonResponse({
+#                 'waveform_url': f'/{waveform_path}',
+#                 'spectrogram_url': f'/{spectrogram_path}',
+#                 'label': audio_label,
+#                 'confidence': float(audio_confidence[0])
+#             })
 
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+#         except Exception as e:
+#             return JsonResponse({'error': str(e)}, status=500)
 
 def visualize_waveform(audio_path):
     import librosa
@@ -537,3 +544,179 @@ def visualize_spectrogram(audio_path):
     plt.close()
 
     return output_path
+
+
+# views.py
+import uuid
+from django.core.files import File
+def media_image(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        image_file = request.FILES['file']
+
+        # Handle both in-memory and temporary file uploads
+        if isinstance(image_file, TemporaryUploadedFile):
+            image_file_path = image_file.temporary_file_path()
+        else:
+            # Save the in-memory file to a temporary file
+            temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_uploads")
+            os.makedirs(temp_dir, exist_ok=True)
+
+            image_file_path = os.path.join(temp_dir, image_file.name)
+            with open(image_file_path, "wb") as f:
+                for chunk in image_file.chunks():
+                    f.write(chunk)
+
+        # Get metadata
+        metadata = get_image_metadata(image_file_path)
+        metadata = {key: convert_ifd_rational(value) for key, value in metadata.items()}
+
+        # Perform ELA
+        ela_filename = f'ela_{uuid.uuid4()}.png'
+        ela_path = os.path.join(settings.MEDIA_ROOT, 'temp', ela_filename)
+        os.makedirs(os.path.dirname(ela_path), exist_ok=True)
+        error_level_analysis(image_file_path, ela_path)
+
+        # Perform JPEG compression analysis
+        jpeg_filename = f'jpeg_{uuid.uuid4()}.png'
+        jpeg_path = os.path.join(settings.MEDIA_ROOT, 'temp', jpeg_filename)
+        jpeg_compression_analysis(image_file_path, jpeg_path)
+
+        # Perform noise analysis
+        noise_filename = f'noise_{uuid.uuid4()}.png'
+        noise_path = os.path.join(settings.MEDIA_ROOT, 'temp', noise_filename)
+        noise_analysis(image_file_path, noise_path)
+
+        # Get model prediction
+        image_label, image_confidence = check_fake_or_real(image_file_path)
+
+        # Create MediaFile instance
+        media_file = MediaFile.objects.create(
+            user=request.user,
+            file=image_file,
+            media_type='image',
+            prediction=image_label,
+            confidence=float(image_confidence[0]),
+            metadata=metadata,
+        )
+
+        # Save processed images
+        with open(ela_path, 'rb') as f:
+            media_file.ela_image.save(ela_filename, File(f))
+        os.remove(ela_path)  # Cleanup temp file
+
+        with open(jpeg_path, 'rb') as f:
+            media_file.jpeg_image.save(jpeg_filename, File(f))
+        os.remove(jpeg_path)  # Cleanup temp file
+
+        with open(noise_path, 'rb') as f:
+            media_file.noise_image.save(noise_filename, File(f))
+        os.remove(noise_path)  # Cleanup temp file
+
+        # Cleanup temporary uploaded file (if it was in-memory)
+        if not isinstance(image_file, TemporaryUploadedFile):
+            os.remove(image_file_path)
+
+        # Prepare data to return
+        data = {
+            'metadata': metadata,
+            'ela_image_url': media_file.ela_image.url,
+            'jpeg_image_url': media_file.jpeg_image.url,
+            'noise_image_url': media_file.noise_image.url,
+            'label': image_label,
+            'confidence': float(image_confidence[0])
+        }
+
+        return JsonResponse(data)
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+def media_video(request):
+    if request.method == 'POST':
+        try:
+            video_file = request.FILES['file']
+            media_file = MediaFile.objects.create(
+                user=request.user,
+                file=video_file,
+                media_type='video',
+                prediction='',
+                confidence=0.0,
+                metadata={}
+            )
+
+            # Create a temporary file to store the uploaded video
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video:
+                for chunk in video_file.chunks():
+                    temp_video.write(chunk)
+                temp_video_path = temp_video.name
+
+            # Process the video
+            video_label, video_confidence = detect_video(temp_video_path)
+            media_file.prediction = video_label
+            media_file.confidence = float(video_confidence[0])
+
+            # Perform additional analysis (e.g., metadata extraction, frame analysis)
+            metadata = get_video_metadata(temp_video_path)
+            media_file.metadata = metadata
+
+            frame_analysis_path = analyze_video_frames(temp_video_path)
+            with open(frame_analysis_path, 'rb') as f:
+                media_file.frame_analysis_image.save(f'frame_analysis_{uuid.uuid4()}.png', File(f))
+            os.remove(frame_analysis_path)  # Cleanup temp file
+
+            media_file.save()
+
+            return JsonResponse({
+                'metadata': metadata,
+                'frame_analysis_url': media_file.frame_analysis_image.url,
+                'label': video_label,
+                'confidence': float(max(video_confidence))
+            })
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+def media_audio(request):
+    if request.method == 'POST':
+        try:
+            audio_file = request.FILES['file']
+            media_file = MediaFile.objects.create(
+                user=request.user,
+                file=audio_file,
+                media_type='audio',
+                prediction='',
+                confidence=0.0,
+                metadata={}
+            )
+
+            # Create a temporary file to store the uploaded audio
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+                for chunk in audio_file.chunks():
+                    temp_audio.write(chunk)
+                temp_audio_path = temp_audio.name
+
+            # Process the audio
+            audio_label, audio_confidence = detect_audio(temp_audio_path)
+            media_file.prediction = audio_label
+            media_file.confidence = float(audio_confidence[0])
+
+            # Perform additional analysis (e.g., waveform visualization, spectrogram)
+            waveform_path = visualize_waveform(temp_audio_path)
+            with open(waveform_path, 'rb') as f:
+                media_file.waveform_image.save(f'waveform_{uuid.uuid4()}.png', File(f))
+            os.remove(waveform_path)  # Cleanup temp file
+
+            spectrogram_path = visualize_spectrogram(temp_audio_path)
+            with open(spectrogram_path, 'rb') as f:
+                media_file.spectrogram_image.save(f'spectrogram_{uuid.uuid4()}.png', File(f))
+            os.remove(spectrogram_path)  # Cleanup temp file
+
+            media_file.save()
+
+            return JsonResponse({
+                'waveform_url': media_file.waveform_image.url,
+                'spectrogram_url': media_file.spectrogram_image.url,
+                'label': audio_label,
+                'confidence': float(audio_confidence[0])
+            })
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
