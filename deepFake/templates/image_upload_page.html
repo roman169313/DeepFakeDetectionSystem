@@ -3,7 +3,7 @@
 {% block title %}Deepfake Detection{% endblock %}
 {% block content %}
 
-<div class="  min-h-screen flex items-center justify-center">
+<div class="min-h-screen flex items-center justify-center">
     <div class="max-w-md mx-auto p-8 bg-white shadow-md rounded-lg form-container">
         <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Deepfake Detector</h1>
         <p class="text-gray-600 mb-8 text-center">Upload an image to check for deepfake manipulation.</p>
@@ -11,16 +11,33 @@
         <form id="deepfake-upload-form" method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gradient-to-r hover:from-indigo-600 hover:to-pink-600 transition duration-300">
-                Analyze
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gradient-to-r hover:from-indigo-600 hover:to-pink-600 transition duration-300 flex items-center justify-center">
+                <span id="button-text">Analyze</span>
+                <span id="button-loader" class="hidden ml-2">
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </span>
             </button>
         </form>
 
         <div id="results-container" class="mt-8">
             <h2 class="text-2xl font-semibold mb-4 text-gray-800">Detection Results</h2>
-            <div id="wait" class="p-6 bg-gray-100 rounded-lg hidden">
-                <p class="text-gray-600">Analyzing...</p>
+            
+            <!-- Enhanced Loading Animation -->
+            <div id="wait" class="hidden">
+                <div class="flex flex-col items-center justify-center p-8 space-y-4">
+                    <div class="relative w-20 h-20">
+                        <div class="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
+                        <div class="absolute inset-2 rounded-full border-4 border-purple-500 border-t-transparent animate-spin animation-delay-200"></div>
+                        <div class="absolute inset-4 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin animation-delay-400"></div>
+                    </div>
+                    <p class="text-gray-600 text-center">Scanning image for manipulations...</p>
+                    <p class="text-sm text-gray-400">This may take a few moments</p>
+                </div>
             </div>
+            
             <div id="error" class="p-6 bg-red-100 text-red-500 font-medium rounded-lg hidden"></div>
             <div id="response" class="p-6 bg-gray-100 rounded-lg hidden">
                 <h3 class="text-xl font-semibold mb-2">Metadata</h3>
@@ -39,82 +56,126 @@
                 <p id="prediction" class="text-lg font-medium"></p>
             </div>
         </div>
-
-        <!-- <div id="uploaded-files-container" class="mt-8">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Uploaded Files</h2>
-            <ul class="list-disc list-inside space-y-2">
-                {% for media in media_files %}
-                <li>
-                    {{ media.media_type }}: <a href="{{ media.file.url }}" class="text-blue-500 hover:underline">{{ media.file.name }}</a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div> -->
     </div>
 </div>
 
+<style>
+    /* Custom animations */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .animate-spin {
+        animation: spin 1.5s linear infinite;
+    }
+    
+    .animation-delay-200 {
+        animation-delay: 0.2s;
+    }
+    
+    .animation-delay-400 {
+        animation-delay: 0.4s;
+    }
+    
+    /* Smooth transitions */
+    .transition-all {
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 300ms;
+    }
+    td{
+        line-break: anywhere;
+    }
+</style>
+
 <script>
+        function formatMetadataAsTable(metadata) {
+    let table = '<table class="min-w-full border-collapse border border-gray-300">';
+    table += '<thead><tr><th class="border border-gray-300 px-4 py-2">Key</th><th class="border border-gray-300 px-4 py-2">Value</th></tr></thead>';
+    table += '<tbody>';
+    
+    for (const [key, value] of Object.entries(metadata)) {
+        table += `<tr><td class="border border-gray-300 px-4 py-2 font-medium">${key}</td><td class="border border-gray-300 px-4 py-2">${value}</td></tr>`;
+    }
+    
+    table += '</tbody></table>';
+    return table;
+}
     document.getElementById('deepfake-upload-form').addEventListener('submit', function (e) {
         e.preventDefault();
 
         const formData = new FormData(this);
+        formData.append('media_type', 'image'); // Ensure media_type is set to 'image'
         const resultsContainer = document.getElementById('results-container');
         const wait = document.getElementById('wait');
         const responseDiv = document.getElementById('response');
         const errorDiv = document.getElementById('error');
+        const buttonText = document.getElementById('button-text');
+        const buttonLoader = document.getElementById('button-loader');
 
-        // resultsContainer.classList.add('hidden');
+        // Show loading states
+        buttonText.textContent = 'Analyzing...';
+        buttonLoader.classList.remove('hidden');
         responseDiv.classList.add('hidden');
         errorDiv.classList.add('hidden');
         wait.classList.remove('hidden');
+
         fetch('/api/image/', {
-    method: 'POST',
-    body: formData,
-    headers: {
-        'X-CSRFToken': '{{ csrf_token }}',
-    },
-})
-.then(response => response.json())
-.then(data => {
-    console.log('Full API Response:', data);
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Full API Response:', data);
 
-    wait.classList.add('hidden');
-            responseDiv.classList.remove('hidden');
-            // resultsContainer.classList.remove('hidden');
-    if (!data['metadata'] || !data['ela_image_url']) {
-        throw new Error('Invalid API response');
-    }
-
-    // Ensure metadata exists
-    const metadataElement = document.getElementById('metadata');
-    if (metadataElement) {
-        metadataElement.textContent = JSON.stringify(data['metadata'], null, 2);
-    } else {
-        console.error('Metadata element not found');
-    }
-
-    // Ensure images exist before setting src
-    const elaImage = document.getElementById('ela-image');
-    const jpegImage = document.getElementById('jpeg-image');
-    const noiseImage = document.getElementById('noise-image');
-
-    if (elaImage) elaImage.src = data['ela_image_url'];
-    if (jpegImage) jpegImage.src = data['jpeg_image_url'];
-    if (noiseImage) noiseImage.src = data['noise_image_url'];
-
-    // Ensure prediction element exists
-    const predictionElement = document.getElementById('prediction');
-    if (predictionElement) {
-        predictionElement.textContent = `Label: ${data['label']}, Confidence: ${data['confidence']}`;
-    }
-})
-.catch(error => {
+            // Reset button state
+            buttonText.textContent = 'Analyze';
+            buttonLoader.classList.add('hidden');
             wait.classList.add('hidden');
+            responseDiv.classList.remove('hidden');
+
+            if (!data['metadata'] || !data['ela_image_url']) {
+                throw new Error('Invalid API response');
+            }
+
+            // Update results
+            const metadataElement = document.getElementById('metadata');
+            if (metadataElement) {
+                
+// Inject formatted metadata into the UI
+metadataElement.textContent = JSON.stringify(data.metadata, null, 2);
+     
+// Inject formatted metadata into the UI
+metadataElement.innerHTML = formatMetadataAsTable(data.metadata);
+            }
+
+            const elaImage = document.getElementById('ela-image');
+            const jpegImage = document.getElementById('jpeg-image');
+            const noiseImage = document.getElementById('noise-image');
+
+            if (elaImage) elaImage.src = data['ela_image_url'];
+            if (jpegImage) jpegImage.src = data['jpeg_image_url'];
+            if (noiseImage) noiseImage.src = data['noise_image_url'];
+
+            const predictionElement = document.getElementById('prediction');
+            if (predictionElement) {
+                predictionElement.textContent = `Label: ${data['label']}, Confidence: ${data['confidence']}`;
+            }
+        })
+        .catch(error => {
+            // Reset button state
+            buttonText.textContent = 'Analyze';
+            buttonLoader.classList.add('hidden');
+            wait.classList.add('hidden');
+            
+            // Show error
             errorDiv.textContent = `Error during analysis: ${error.message}`;
             errorDiv.classList.remove('hidden');
-});
-
-
+        });
     });
 </script>
 {% endblock %}

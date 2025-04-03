@@ -4,14 +4,12 @@ import numpy as np
 import cv2
 import librosa
 from tensorflow.keras.applications import InceptionV3
+from django.conf import settings
 # Get the absolute path of the 'Models' folder (based on current working directory)
-model_folder_path = os.path.abspath('mlModel')
 
-# Paths to the models using os.path.join to handle path separators correctly
-image_model_path ='D:\Final_Project\deepFakeDetection\DeepFakeDetectionSystem\deepFake\mlModel\custom_augmented_model.h5'
-video_model_path = 'D:\Final_Project\deepFakeDetection\DeepFakeDetectionSystem\deepFake\mlModel\deepfake_detection_model.h5'
-audio_model_path = 'D:\Final_Project\deepFakeDetection\DeepFakeDetectionSystem\deepFake\mlModel\deep_fake_audio_detector.h5'
-
+image_model_path = settings.MODEL_PATHS['image_model']
+video_model_path = settings.MODEL_PATHS['video_model']
+audio_model_path = settings.MODEL_PATHS['audio_model']
 # Load the models
 image_model = tf.keras.models.load_model(image_model_path)
 audio_model = tf.keras.models.load_model(audio_model_path)

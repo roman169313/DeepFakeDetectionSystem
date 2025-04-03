@@ -65,7 +65,7 @@ class UserRegisterForm(UserCreationForm):
 class MediaFileForm(forms.ModelForm):
     class Meta:
         model = MediaFile
-        fields = ['file', 'media_type']
+        fields = ['file']
 
     # Override the 'file' field to change the input name to 'image_file'
     file = forms.FileField(

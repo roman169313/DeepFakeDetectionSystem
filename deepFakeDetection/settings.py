@@ -157,3 +157,16 @@ STATICFILES_DIRS = [
 ]
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Base directory containing your models
+MODELS_DIR = os.path.join(BASE_DIR, 'deepFake', 'mlModel')
+
+# Model paths
+MODEL_PATHS = {
+    'image_model': os.path.join(MODELS_DIR, 'custom_augmented_model.h5'),
+    'video_model': os.path.join(MODELS_DIR, 'deepfake_detection_model.h5'),
+    'audio_model': os.path.join(MODELS_DIR, 'deep_fake_audio_detector.h5'),
+}
+
+# Exiftool path
+EXIFTOOL_PATH = os.path.join(MODELS_DIR, 'exiftool.exe')

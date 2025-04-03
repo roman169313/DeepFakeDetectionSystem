@@ -43,6 +43,8 @@ from reportlab.pdfgen import canvas
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
+from django.utils import timezone  # Add this import at the top
+from django.conf import settings  # A
 @login_required
 def results_history(request):
     results = MediaFile.objects.filter(user=request.user).order_by('-uploaded_at')
@@ -50,16 +52,54 @@ def results_history(request):
 import csv
 from django.http import HttpResponse
 
+import csv
+import json
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.conf import settings
+
 def export_result_csv(request, result_id):
-    result = get_object_or_404(MediaFile, user=request.user, id=result_id)
-
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="result_{result_id}.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow(["Result ID", "User", "Media Type", "Prediction", "Confidence"])
-    writer.writerow([result.id, result.user.username, result.media_type, result.prediction, result.confidence])
-
+    result = get_object_or_404(MediaFile, id=result_id)
+    
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': f'attachment; filename="deepfake_analysis_{result_id}.csv"'},
+    )
+    
+    # Write UTF-8 BOM for Excel compatibility
+    response.write('\ufeff')
+    
+    writer = csv.DictWriter(response, fieldnames=["Field", "Value"])
+    writer.writeheader()
+    
+    # Core information
+    writer.writerow({"Field": "Report Type", "Value": "Deepfake Analysis"})
+    writer.writerow({"Field": "Analysis ID", "Value": result.id})
+    writer.writerow({"Field": "Generated On", "Value": timezone.now().strftime('%Y-%m-%d %H:%M:%S')})
+    writer.writerow({"Field": "", "Value": ""})  # Spacer
+    
+    # Results
+    writer.writerow({"Field": "User", "Value": result.user.username})
+    writer.writerow({"Field": "Media Type", "Value": result.media_type})
+    writer.writerow({"Field": "Prediction", "Value": result.prediction})
+    writer.writerow({"Field": "Confidence Score", "Value": f"{float(result.confidence or 0):.2f}%"})
+    writer.writerow({"Field": "Upload Date", "Value": result.uploaded_at.strftime('%Y-%m-%d %H:%M')})
+    writer.writerow({"Field": "", "Value": ""})  # Spacer
+    
+    # Metadata
+    writer.writerow({"Field": "METADATA", "Value": ""})
+    if isinstance(result.metadata, dict):
+        for key, value in result.metadata.items():
+            if isinstance(value, dict):
+                writer.writerow({"Field": f"{key}", "Value": ""})
+                for subkey, subvalue in value.items():
+                    writer.writerow({"Field": f"  {subkey}", "Value": str(subvalue)[:500]})
+            else:
+                writer.writerow({"Field": key, "Value": str(value)[:500]})
+    else:
+        writer.writerow({"Field": "Metadata", "Value": str(result.metadata)[:1000]})
+    
     return response
 @login_required
 def user_list(request):
@@ -71,55 +111,205 @@ def user_detail(request, user_id):
     user = get_object_or_404(User, id=user_id)
     media=MediaFile.objects.filter(user=user)
     return render(request, 'user_details.html', {'media': media})
+from django.utils import timezone
+from django.conf import settings
+import os
+import json
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+
 def export_result_pdf(request, result_id):
-    result = get_object_or_404(MediaFile,  id=result_id)
+    result = get_object_or_404(MediaFile, id=result_id)
 
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="result_{result_id}.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="deepfake_report_{result_id}.pdf"'
 
-    # Create PDF
     pdf = canvas.Canvas(response, pagesize=letter)
-    width, height = letter  # Default page size
+    width, height = letter
+    margin = 40
+    y_offset = height - margin
+    line_height = 20
+    section_spacing = 30
 
-    # Title
-    pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(200, height - 50, "Result Report")
+    # Colors and styles
+    primary_color = (0.2, 0.4, 0.6)  # Dark blue
+    secondary_color = (0.4, 0.2, 0.6)  # Purple
+    accent_color = (0.8, 0.1, 0.1)  # Red for important info
+    metadata_color = (0.3, 0.3, 0.3)  # Dark gray
 
-    # Metadata
-    pdf.setFont("Helvetica", 12)
-    pdf.drawString(50, height - 100, f"Result ID: {result.id}")
-    pdf.drawString(50, height - 120, f"User: {result.user.username}")
-    pdf.drawString(50, height - 140, f"Media Type: {result.media_type}")
-    pdf.drawString(50, height - 160, f"Prediction: {result.prediction}")
-    pdf.drawString(50, height - 180, f"Confidence: {result.confidence}")
-
-    # Add Images (If Exist)
-    y_offset = height - 220  # Start placing images below metadata
-
-    def add_image(image_path, label):
+    def add_page():
+        """Creates a new page with footer"""
         nonlocal y_offset
-        if image_path and os.path.exists(image_path):
-            try:
-                img = ImageReader(image_path)
-                pdf.drawString(50, y_offset - 20, label)
-                pdf.drawImage(img, 50, y_offset - 120, width=200, height=100)
-                y_offset -= 140  # Move down for the next image
-            except Exception as e:
-                pdf.drawString(50, y_offset - 20, f"Error displaying {label}: {str(e)}")
+        pdf.showPage()
+        y_offset = height - margin
+        add_footer()
 
-    # Display images
-    add_image(result.file.path if result.file else None, "Original Media File:")
-    add_image(result.waveform_image.path if result.waveform_image else None, "Waveform:")
-    add_image(result.spectrogram_image.path if result.spectrogram_image else None, "Spectrogram:")
+    def add_footer():
+        """Adds footer to current page"""
+        pdf.setFont("Helvetica", 8)
+        pdf.setFillColorRGB(0.5, 0.5, 0.5)
+        pdf.drawString(margin, 30, f"Deepfake Detection Report - {result.id}")
+        pdf.drawRightString(width - margin, 30, f"Page {pdf.getPageNumber()}")
+
+    def draw_section_title(title, color=primary_color):
+        """Draws a styled section title"""
+        nonlocal y_offset
+        if y_offset < 100:  # Ensure enough space
+            add_page()
+        pdf.setFillColorRGB(*color)
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(margin, y_offset, title)
+        y_offset -= line_height
+        pdf.line(margin, y_offset + 5, width - margin, y_offset + 5)
+        y_offset -= 10
+
+    def draw_key_value(key, value, important=False):
+        """Draws a key-value pair with proper spacing"""
+        nonlocal y_offset
+        if y_offset < 100:
+            add_page()
+        
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.setFillColorRGB(0, 0, 0)
+        pdf.drawString(margin, y_offset, f"{key}:")
+        
+        pdf.setFont("Helvetica", 10)
+        pdf.setFillColorRGB(*accent_color if important else metadata_color)
+        pdf.drawString(margin + 120, y_offset, str(value))
+        y_offset -= line_height
+
+    def draw_metadata(metadata):
+        """Handles metadata display with proper pagination"""
+        nonlocal y_offset
+        
+        if y_offset < height / 3:
+            add_page()
+        
+        text = pdf.beginText(margin, y_offset)
+        text.setFont("Helvetica", 9)
+        text.setFillColorRGB(*metadata_color)
+        
+        if isinstance(metadata, dict):
+            metadata_str = json.dumps(metadata, indent=2)
+        else:
+            metadata_str = str(metadata)
+        
+        for line in metadata_str.split('\n'):
+            if y_offset < 100:
+                pdf.drawText(text)
+                add_page()
+                text = pdf.beginText(margin, y_offset)
+                text.setFont("Helvetica", 9)
+                text.setFillColorRGB(*metadata_color)
+            
+            trimmed_line = line[:100] + ('...' if len(line) > 100 else '')
+            text.textLine(trimmed_line)
+            y_offset -= 12
+        
+        pdf.drawText(text)
+        y_offset -= section_spacing
+
+    def add_analysis_image(image_field, title, description=""):
+        """Helper to add analysis images with titles"""
+        nonlocal y_offset
+        if image_field and hasattr(image_field, 'path') and os.path.exists(image_field.path):
+            needed_space = 150
+            if y_offset - needed_space < 50:
+                add_page()
+            
+            pdf.setFont("Helvetica-Bold", 12)
+            pdf.setFillColorRGB(*secondary_color)
+            pdf.drawString(margin, y_offset, title)
+            y_offset -= 15
+            
+            if description:
+                pdf.setFont("Helvetica", 8)
+                pdf.setFillColorRGB(0.5, 0.5, 0.5)
+                pdf.drawString(margin, y_offset, description)
+                y_offset -= 15
+            
+            try:
+                img = ImageReader(image_field.path)
+                pdf.drawImage(img, margin, y_offset - 100, width=250, height=100, preserveAspectRatio=True)
+                y_offset -= 120
+            except Exception as e:
+                pdf.setFont("Helvetica", 8)
+                pdf.setFillColorRGB(*accent_color)
+                pdf.drawString(margin, y_offset, f"Error displaying image: {str(e)}")
+                y_offset -= 20
+            
+            y_offset -= 20
+
+    # Cover Page
+    pdf.setFillColorRGB(*primary_color)
+    pdf.setFont("Helvetica-Bold", 24)
+    pdf.drawCentredString(width/2, height/2 + 50, "Deepfake Detection Report")
+    
+    pdf.setFillColorRGB(0.3, 0.3, 0.3)
+    pdf.setFont("Helvetica", 16)
+    pdf.drawCentredString(width/2, height/2, f"Analysis ID: {result.id}")
+    
+    pdf.setFont("Helvetica", 12)
+    pdf.drawCentredString(width/2, height/2 - 30, f"Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M')}")
+    
+    # Draw logo if available
+    try:
+        logo_path = os.path.join(settings.STATIC_ROOT, 'images/logo.png')
+        if os.path.exists(logo_path):
+            img = ImageReader(logo_path)
+            pdf.drawImage(img, width/2 - 50, height/2 - 100, width=100, height=100)
+    except:
+        pass
+
+    # Start content pages
+    add_page()
+
+    # Basic Information Section
+    draw_section_title("1. Basic Information")
+    draw_key_value("User", result.user.username)
+    draw_key_value("Media Type", result.media_type)
+    draw_key_value("Upload Date", result.uploaded_at.strftime('%Y-%m-%d %H:%M'))
+    draw_key_value("Prediction", result.prediction, important=True)
+    draw_key_value("Confidence Score", f"{result.confidence:.2f}%", important=True)
+    y_offset -= section_spacing
+
+    # Technical Metadata Section
+    draw_section_title("2. Technical Metadata")
+    if y_offset < height / 3:
+        add_page()
+        draw_section_title("2. Technical Metadata (continued)")
+    draw_metadata(result.metadata)
+
+    # Analysis Visuals Section (for images/audio only)
+    if result.media_type.lower() not in ['video', 'mp4', 'avi', 'mkv']:
+        draw_section_title("3. Forensic Analysis Visuals")
+        
+        add_analysis_image(result.ela_image, "Error Level Analysis (ELA)", 
+                         "ELA highlights areas of potential manipulation through compression differences")
+        
+        add_analysis_image(result.jpeg_image, "JPEG Compression Analysis",
+                         "Shows compression artifacts that may indicate editing")
+        
+        add_analysis_image(result.noise_image, "Noise Pattern Analysis",
+                         "Inconsistent noise patterns can reveal tampering")
+        
+        add_analysis_image(result.spectrogram_image, "Audio Spectrogram",
+                         "Visual representation of audio frequencies (if audio file)")
+        
+        add_analysis_image(result.frame_analysis_image, "Frame Analysis",
+                         "Key frame analysis for video files")
+        add_analysis_image(result.waveform_image, "Frame Analysis","Key frame analysis for audio files")
 
     # Finalize PDF
-    pdf.showPage()
     pdf.save()
     return response
-
 @login_required
 def result_detail(request, result_id):
     result = MediaFile.objects.filter( id=result_id).first()
+    print(result)
     if not result_id:
         return JsonResponse({"error": "Missing result_id"}, status=400)
     return render(request, 'result_detail.html', {'result': result})
@@ -426,11 +616,24 @@ def convert_ifd_rational(obj):
 #         except Exception as e:
 #             return JsonResponse({'error': str(e)}, status=500)
 
+import subprocess
+
 def get_video_metadata(video_path):
-    # Use a library like ffmpeg or exiftool to extract video metadata
-    import subprocess
-    result = subprocess.run(['D:\Final_Project\deepFakeDetection\DeepFakeDetectionSystem\deepFake\mlModel\exiftool.exe', video_path], stdout=subprocess.PIPE)
-    metadata = result.stdout.decode('utf-8')
+    # Run ExifTool command
+    result = subprocess.run(
+        [str(settings.EXIFTOOL_PATH), video_path],
+        stdout=subprocess.PIPE
+    )
+    
+    # Decode output
+    metadata_str = result.stdout.decode('utf-8')
+    
+    # Convert to dictionary
+    metadata = {}
+    for line in metadata_str.split("\n"):
+        if ": " in line:  # Only process lines with key-value pairs
+            key, value = line.split(": ", 1)
+            metadata[key.strip()] = value.strip()
     print(metadata)
     return metadata
 

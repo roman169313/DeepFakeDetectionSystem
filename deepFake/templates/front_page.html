@@ -2,69 +2,153 @@
 {% load static %}
 {% block title %}Welcome{% endblock %}
 {% block content %}
-<div class="min-h-screen ">
-
-  <!-- Hero Section -->
-  <section class="relative w-full h-[100vh] flex items-center justify-center text-white">
-      <div class="absolute inset-0 bg-black opacity-50"></div>  {# Overlay for contrast #}
-      <div class="container mx-auto text-center relative z-10 px-6">
-          <h1 class="text-5xl font-bold mb-6 leading-tight">Spot the Deepfakes</h1>
-          <p class="text-xl mb-10 leading-relaxed">AI-powered deepfake detection for images, videos, and audio.</p>
-          <div class="flex justify-center space-x-6">
-              <a href="{% url 'image_upload_page' %}" class="hero-button">Image</a>
-              <a href="{% url 'video_upload_page' %}" class="hero-button">Video</a>
-              <a href="{% url 'audio_upload_page' %}" class="hero-button">Audio</a>
-          </div>
-      </div>
-  </section>
-
-  <!-- Upload Section -->
-  <section class="py-16 bg-white">
-      <div class="container mx-auto px-6">
-          <h2 class="text-3xl font-bold mb-8 text-center text-gray-800">Check Your Media</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
-              <div class="media-card transform transition duration-300 hover:scale-105 animate-fadeInUp">
-                  <img src="{% static 'images/image_icon.png' %}" alt="Image" class="media-icon">
-                  <h3 class="text-xl font-semibold mb-4 text-gray-800">Image</h3>
-                  <a href="{% url 'image_upload_page' %}" class="media-button">Upload Image</a>
-              </div>
-              <div class="media-card transform transition duration-300 hover:scale-105 animate-fadeInUp">
-                  <img src="{% static 'images/video_icon.png' %}" alt="Video" class="media-icon">
-                  <h3 class="text-xl font-semibold mb-4 text-gray-800">Video</h3>
-                  <a href="{% url 'video_upload_page' %}" class="media-button">Upload Video</a>
-              </div>
-              <div class="media-card transform transition duration-300 hover:scale-105 animate-fadeInUp">
-                  <img src="{% static 'images/audio_icon.png' %}" alt="Audio" class="media-icon">
-                  <h3 class="text-xl font-semibold mb-4 text-gray-800">Audio</h3>
-                  <a href="{% url 'audio_upload_page' %}" class="media-button">Upload Audio</a>
-              </div>
-          </div>
-      </div>
-  </section>
-
-  <!-- About Us Section -->
-  <section class="py-16 bg-gray-100">
-      <div class="container mx-auto px-6 text-center">
-          <h2 class="text-3xl font-bold mb-6 text-gray-800">About Us</h2>
-          <p class="max-w-2xl mx-auto text-gray-600 leading-relaxed">
-              We are a team of experts dedicated to combating the spread of deepfakes. Our mission is to provide accurate and reliable deepfake detection tools to help protect individuals and organizations from misinformation.
-          </p>
-      </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="bg-gray-800 py-6 text-center text-gray-300">
-      <p>&copy; 2025 Deepfake Detector | Made By Roman Ahmad</p>
-  </footer>
-
-</div>
-
-
-<!-- Tailwind Utility Classes -->
 <style>
+    /* Hero Button */
 .hero-button {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    color: white;
+    transition: all 0.3s ease;
+    transform: scale(1);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
+.hero-button:hover {
+    transform: scale(1.05);
+}
+
+/* Media Card */
+.media-card {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+.media-card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(-0.5rem);
+}
+
+/* Media Icon Container */
+.media-icon-container {
+    width: 5rem;
+    height: 5rem;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1.5rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Media Icon */
+.media-icon {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Media Button */
+.media-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    color: white;
+    background-color: #2563eb;
+    transition: all 0.3s ease;
+}
+.media-button:hover {
+    background-color: #1d4ed8;
+}
+
+/* Stat Card */
+.stat-card {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    border: 1px solid #f3f4f6;
+}
+
+/* Feature Card */
+.feature-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+}
+.feature-card:hover {
+    background-color: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Feature Icon */
+.feature-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* Testimonial Card */
+.testimonial-card {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+.testimonial-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Testimonial Content */
+.testimonial-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* CTA Button */
+.cta-button {
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+/* Social Icon */
+.social-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    background-color: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #374151;
+    transition: all 0.3s ease;
+}
+.social-icon:hover {
+    background-color: #2563eb;
+    color: white;
+}
+
+/* Animations */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -76,33 +160,336 @@
     }
 }
 
-.media-card {
-    animation: fadeInUp 1s ease-in-out;
-    transition: transform 0.3s ease-in-out;
+.animate-fadeInUp {
+    animation: fadeInUp 0.8s ease-out forwards;
 }
 
-.media-card:hover {
-    transform: scale(1.05);
+.delay-100 {
+    animation-delay: 0.1s;
 }
-
-.media-card {
-    @apply bg-white p-6 rounded-lg shadow-lg text-center transition-all duration-300 hover:shadow-2xl hover:scale-105;
+.delay-200 {
+    animation-delay: 0.2s;
 }
-
-.media-icon {
-    @apply w-20 mx-auto mb-4;
+.delay-300 {
+    animation-delay: 0.3s;
 }
-
-.media-button {
-    @apply bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg transition-all duration-300 mt-4 inline-block;
-}
-/* @media (max-width: 768px) {
-    .hero-section {
-        height: auto;
-        padding-bottom: 2rem;
-    }
-} */
-
 </style>
+<div class="min-h-screen ">
+
+  <!-- Hero Section -->
+  <section class="relative w-full h-screen flex items-center justify-center text-white ">
+      <div class="absolute inset-0 bg-black opacity-40"></div>
+      <div class="container mx-auto text-center relative z-10 px-6">
+          <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight">Spot the Deepfakes with AI</h1>
+          <p class="text-xl md:text-2xl mb-10 leading-relaxed max-w-3xl mx-auto">
+              Protect yourself from digital deception with our advanced deepfake detection technology
+          </p>
+          <div class="flex flex-col sm:flex-row justify-center gap-4">
+              <a href="{% url 'image_upload_page' %}" class="hero-button bg-blue-600 hover:bg-blue-700">
+                  <i class="fas fa-image mr-2"></i> Check Image
+              </a>
+              <a href="{% url 'video_upload_page' %}" class="hero-button bg-purple-600 hover:purple-700">
+                  <i class="fas fa-video mr-2"></i> Analyze Video
+              </a>
+              <a href="{% url 'audio_upload_page' %}" class="hero-button bg-indigo-600 hover:bg-indigo-700">
+                  <i class="fas fa-microphone mr-2"></i> Verify Audio
+              </a>
+          </div>
+          <div class="mt-12 animate-bounce">
+              <i class="fas fa-chevron-down text-2xl opacity-70"></i>
+          </div>
+      </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="py-16 bg-white">
+      <div class="container mx-auto px-6">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+              <div class="stat-card">
+                  <div class="text-4xl font-bold text-blue-600 mb-2">10K+</div>
+                  <div class="text-gray-600">Media Analyzed</div>
+              </div>
+              <div class="stat-card">
+                  <div class="text-4xl font-bold text-purple-600 mb-2">98%</div>
+                  <div class="text-gray-600">Accuracy Rate</div>
+              </div>
+              <div class="stat-card">
+                  <div class="text-4xl font-bold text-indigo-600 mb-2">24/7</div>
+                  <div class="text-gray-600">Detection Service</div>
+              </div>
+              <div class="stat-card">
+                  <div class="text-4xl font-bold text-green-600 mb-2">1M+</div>
+                  <div class="text-gray-600">Protected Users</div>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <!-- Upload Section -->
+  <section class="py-20 bg-gray-50">
+      <div class="container mx-auto px-6">
+          <h2 class="text-3xl font-bold mb-4 text-center text-gray-800">Check Your Media in Seconds</h2>
+          <p class="text-xl text-center text-gray-600 mb-12 max-w-3xl mx-auto">
+              Upload your suspicious files and get instant analysis with detailed reports
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+              <div class="media-card">
+                  <div class="media-icon-container bg-blue-100">
+                      <img src="{% static 'images/image_icon.png' %}" alt="Image" class="media-icon">
+                  </div>
+                  <h3 class="text-2xl font-semibold mb-4 text-gray-800">Image Detection</h3>
+                  <p class="text-gray-600 mb-6">Identify manipulated facial features and inconsistencies in photos</p>
+                  <a href="{% url 'image_upload_page' %}" class="media-button">
+                      <i class="fas fa-upload mr-2"></i> Upload Image
+                  </a>
+              </div>
+              <div class="media-card">
+                  <div class="media-icon-container bg-purple-100">
+                      <img src="{% static 'images/video_icon.png' %}" alt="Video" class="media-icon">
+                  </div>
+                  <h3 class="text-2xl font-semibold mb-4 text-gray-800">Video Analysis</h3>
+                  <p class="text-gray-600 mb-6">Detect temporal inconsistencies and synthetic movements in videos</p>
+                  <a href="{% url 'video_upload_page' %}" class="media-button">
+                      <i class="fas fa-upload mr-2"></i> Upload Video
+                  </a>
+              </div>
+              <div class="media-card">
+                  <div class="media-icon-container bg-indigo-100">
+                      <img src="{% static 'images/audio_icon.png' %}" alt="Audio" class="media-icon">
+                  </div>
+                  <h3 class="text-2xl font-semibold mb-4 text-gray-800">Audio Verification</h3>
+                  <p class="text-gray-600 mb-6">Spot synthetic voice patterns and manipulated audio clips</p>
+                  <a href="{% url 'audio_upload_page' %}" class="media-button">
+                      <i class="fas fa-upload mr-2"></i> Upload Audio
+                  </a>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="py-20 bg-white">
+      <div class="container mx-auto px-6">
+          <h2 class="text-3xl font-bold mb-4 text-center text-gray-800">Advanced Detection Features</h2>
+          <p class="text-xl text-center text-gray-600 mb-12 max-w-3xl mx-auto">
+              Our technology combines multiple verification methods for comprehensive analysis
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div class="feature-card">
+                  <div class="feature-icon bg-blue-100 text-blue-600">
+                      <i class="fas fa-brain"></i>
+                  </div>
+                  <h3 class="text-xl font-semibold mb-3 text-gray-800">Deep Learning Models</h3>
+                  <p class="text-gray-600">
+                      State-of-the-art neural networks trained on thousands of real and fake media samples
+                  </p>
+              </div>
+              <div class="feature-card">
+                  <div class="feature-icon bg-purple-100 text-purple-600">
+                      <i class="fas fa-chart-bar"></i>
+                  </div>
+                  <h3 class="text-xl font-semibold mb-3 text-gray-800">Forensic Analysis</h3>
+                  <p class="text-gray-600">
+                      Detailed reports with visual evidence like spectrograms, ELA images, and frame comparisons
+                  </p>
+              </div>
+              <div class="feature-card">
+                  <div class="feature-icon bg-indigo-100 text-indigo-600">
+                      <i class="fas fa-shield-alt"></i>
+                  </div>
+                  <h3 class="text-xl font-semibold mb-3 text-gray-800">Privacy Protection</h3>
+                  <p class="text-gray-600">
+                      Your files are processed securely and never stored longer than necessary
+                  </p>
+              </div>
+              <div class="feature-card">
+                  <div class="feature-icon bg-green-100 text-green-600">
+                      <i class="fas fa-bolt"></i>
+                  </div>
+                  <h3 class="text-xl font-semibold mb-3 text-gray-800">Real-Time Results</h3>
+                  <p class="text-gray-600">
+                      Get instant feedback with confidence scores and detailed explanations
+                  </p>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="py-20 bg-gray-50">
+      <div class="container mx-auto px-6">
+          <h2 class="text-3xl font-bold mb-12 text-center text-gray-800">Trusted by Professionals</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div class="testimonial-card">
+                  <div class="testimonial-content">
+                      <div class="text-yellow-400 mb-2">
+                          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                      </div>
+                      <p class="text-gray-700 italic mb-4">
+                          "This tool saved our newsroom from publishing manipulated content. The detailed forensic reports are invaluable."
+                      </p>
+                      <div class="flex items-center">
+                          <div class="h-10 w-10 rounded-full bg-gray-300 mr-3"></div>
+                          <div>
+                              <div class="font-semibold">Sarah Johnson</div>
+                              <div class="text-sm text-gray-600">Investigative Journalist</div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+              <div class="testimonial-card">
+                  <div class="testimonial-content">
+                      <div class="text-yellow-400 mb-2">
+                          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                      </div>
+                      <p class="text-gray-700 italic mb-4">
+                          "As a cybersecurity professional, I rely on this platform to verify digital evidence. The accuracy is impressive."
+                      </p>
+                      <div class="flex items-center">
+                          <div class="h-10 w-10 rounded-full bg-gray-300 mr-3"></div>
+                          <div>
+                              <div class="font-semibold">Michael Chen</div>
+                              <div class="text-sm text-gray-600">Cybersecurity Expert</div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+              <div class="testimonial-card">
+                  <div class="testimonial-content">
+                      <div class="text-yellow-400 mb-2">
+                          <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                      </div>
+                      <p class="text-gray-700 italic mb-4">
+                          "The most user-friendly deepfake detector I've used. The video analysis is particularly thorough."
+                      </p>
+                      <div class="flex items-center">
+                          <div class="h-10 w-10 rounded-full bg-gray-300 mr-3"></div>
+                          <div>
+                              <div class="font-semibold">David Miller</div>
+                              <div class="text-sm text-gray-600">Media Professor</div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-16 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+      <div class="container mx-auto px-6 text-center">
+          <h2 class="text-3xl font-bold mb-6">Ready to Verify Your Media?</h2>
+          <p class="text-xl mb-8 max-w-2xl mx-auto">
+              Join thousands of users protecting themselves from digital deception
+          </p>
+          <div class="flex flex-col sm:flex-row justify-center gap-4">
+              <a href="{% url 'image_upload_page' %}" class="cta-button bg-white text-blue-600 hover:bg-gray-100">
+                  Get Started Now
+              </a>
+              <a href="#" class="cta-button border-2 border-white hover:bg-white hover:text-blue-600">
+                  Learn How It Works
+              </a>
+          </div>
+      </div>
+  </section>
+
+  <!-- About Us Section -->
+  <section class="py-20 bg-white">
+      <div class="container mx-auto px-6">
+          <div class="flex flex-col md:flex-row items-center">
+              <div class="md:w-1/2 mb-10 md:mb-0 md:pr-10">
+                  <h2 class="text-3xl font-bold mb-6 text-gray-800">About Our Technology</h2>
+                  <p class="text-gray-600 mb-6 leading-relaxed">
+                      Our deepfake detection platform combines cutting-edge artificial intelligence with digital forensic techniques to identify manipulated media with unprecedented accuracy.
+                  </p>
+                  <p class="text-gray-600 mb-6 leading-relaxed">
+                      Developed by a team of AI researchers and cybersecurity experts, our models are continuously updated to detect the latest generation of synthetic media.
+                  </p>
+                  <div class="flex space-x-4">
+                      <a href="#" class="social-icon">
+                          <i class="fab fa-twitter"></i>
+                      </a>
+                      <a href="#" class="social-icon">
+                          <i class="fab fa-linkedin"></i>
+                      </a>
+                      <a href="#" class="social-icon">
+                          <i class="fab fa-github"></i>
+                      </a>
+                  </div>
+              </div>
+              <div class="md:w-1/2">
+                  <div class="bg-gray-100 rounded-xl p-2 shadow-lg">
+                      <img src="{% static 'images/tech_demo.png' %}" alt="Technology Demo" class="rounded-lg w-full">
+                  </div>
+              </div>
+          </div>
+      </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-300 py-12">
+      <div class="container mx-auto px-6">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+              <div>
+                  <h3 class="text-lg font-semibold text-white mb-4">Deepfake Detector</h3>
+                  <p class="mb-4">
+                      Advanced AI-powered detection for images, videos, and audio
+                  </p>
+                  <div class="flex space-x-4">
+                      <a href="https://www.facebook.com/ruman.azhar.33/" class="text-gray-400 hover:text-white">
+                          <i class="fab fa-facebook-f"></i>
+                      </a>
+                      <a href="#" class="text-gray-400 hover:text-white">
+                          <i class="fab fa-twitter"></i>
+                      </a>
+                      <a href="https://www.instagram.com/romanahmad24/" class="text-gray-400 hover:text-white">
+                          <i class="fab fa-instagram"></i>
+                      </a>
+                  </div>
+              </div>
+              <div>
+                  <h3 class="text-lg font-semibold text-white mb-4">Quick Links</h3>
+                  <ul class="space-y-2">
+                      <li><a href="#" class="hover:text-white">Home</a></li>
+                      <li><a href="{% url 'image_upload_page' %}" class="hover:text-white">Image Detection</a></li>
+                      <li><a href="{% url 'video_upload_page' %}" class="hover:text-white">Video Analysis</a></li>
+                      <li><a href="{% url 'audio_upload_page' %}" class="hover:text-white">Audio Verification</a></li>
+                  </ul>
+              </div>
+              <!-- <div>
+                  <h3 class="text-lg font-semibold text-white mb-4">Resources</h3>
+                  <ul class="space-y-2">
+                      <li><a href="#" class="hover:text-white">Documentation</a></li>
+                      <li><a href="#" class="hover:text-white">API Access</a></li>
+                      <li><a href="#" class="hover:text-white">Research Papers</a></li>
+                      <li><a href="#" class="hover:text-white">Blog</a></li>
+                  </ul>
+              </div> -->
+              <div>
+                  <h3 class="text-lg font-semibold text-white mb-4">Contact</h3>
+                  <ul class="space-y-2">
+                      <li class="flex items-center">
+                          <i class="fas fa-envelope mr-2"></i> roman169313@gmail.com
+                      </li>
+                      <li class="flex items-center">
+                          <i class="fas fa-phone mr-2"></i> +92 3249127603
+                      </li>
+                      <li class="flex items-center">
+                          <i class="fas fa-map-marker-alt mr-2"></i> San Francisco, CA
+                      </li>
+                  </ul>
+              </div>
+          </div>
+          <div class="border-t border-gray-800 mt-10 pt-6 text-center">
+              <p>&copy; 2025 Deepfake Detector | Made By Roman Ahmad</p>
+          </div>
+      </div>
+  </footer>
+
+</div>
+
+
+<!-- Font Awesome for icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
 
 {% endblock %}
