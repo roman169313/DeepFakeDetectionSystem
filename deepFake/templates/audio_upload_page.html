@@ -2,7 +2,19 @@
 {% load static %}
 {% block title %}Deepfake Detection - Audio{% endblock %}
 {% block content %}
-
+<style>
+    td {
+        line-break: anywhere;
+    }
+    #audio-preview {
+        max-width: 100%;
+        margin-top: 1rem;
+        display: none;
+    }
+    #audio-container {
+        margin-bottom: 1rem;
+    }
+</style>
 <div class=" min-h-screen flex items-center justify-center">
     <div class="max-w-md mx-auto p-8 bg-white shadow-md rounded-lg form-container">
         <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Deepfake Detector - Audio</h1>
@@ -11,6 +23,14 @@
         <form id="deepfake-upload-form" method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
             {{ form.as_p }}
+            {% if form.file.errors %}
+            <div class="text-red-500">{{ form.file.errors }}</div>
+        {% endif %}
+        <div id="audio-container">
+            <audio id="audio-preview" controls>
+                Your browser does not support the audio element.
+            </audio>
+        </div>
             <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gradient-to-r hover:from-indigo-600 hover:to-pink-600 transition duration-300 flex items-center justify-center">
                 <span id="button-text">Analyze</span>
                 <span id="button-loader" class="hidden ml-2">
@@ -62,6 +82,17 @@
 </div>
 
 <script>
+    // Add event listener for file input change to show audio preview
+    document.getElementById('id_file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.includes('audio')) {
+            const audioPreview = document.getElementById('audio-preview');
+            const audioURL = URL.createObjectURL(file);
+            
+            audioPreview.src = audioURL;
+            audioPreview.style.display = 'block';
+        }
+    });
     document.getElementById('deepfake-upload-form').addEventListener('submit', function (e) {
         e.preventDefault();
 

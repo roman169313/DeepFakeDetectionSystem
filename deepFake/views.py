@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from .models import MediaFile
-from .forms import MediaFileForm
+from .forms import  MediaImageForm, MediaAudioForm, MediaVideoForm
 from .ml_models import check_fake_or_real, detect_audio, detect_video
 import tempfile
 import os
@@ -429,25 +429,25 @@ def front_page(request):
     return render(request, 'front_page.html')
 
 def image_upload_page(request):
-    form = MediaFileForm()
+    form = MediaImageForm()
     if request.method == 'POST':
-        form = MediaFileForm(request.POST, request.FILES)
+        form = MediaImageForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
     media_files = MediaFile.objects.all()
     return render(request, 'image_upload_page.html', {'form': form, 'media_files': media_files})
 def audio_upload_page(request):
-    form = MediaFileForm()
+    form = MediaAudioForm()
     if request.method == 'POST':
-        form = MediaFileForm(request.POST, request.FILES)
+        form = MediaAudioForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
     media_files = MediaFile.objects.all()
     return render(request, 'audio_upload_page.html', {'form': form, 'media_files': media_files})
 def video_upload_page(request):
-    form = MediaFileForm()
+    form = MediaVideoForm()
     if request.method == 'POST':
-        form = MediaFileForm(request.POST, request.FILES)
+        form = MediaVideoForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
     media_files = MediaFile.objects.all()
@@ -463,36 +463,63 @@ def media_api_detail(request, pk):
         return JsonResponse(media_file, safe=False)
     except MediaFile.DoesNotExist:
         return JsonResponse({'error': 'Not found'}, status=404)
+from PIL import Image, ImageChops
+import numpy as np
+import matplotlib.pyplot as plt
+
 def error_level_analysis(image_path, output_path):
-    original = Image.open(image_path)
-    
-    # Convert image to RGB mode if it's in P mode
-    if original.mode == 'P':
-        original = original.convert('RGB')
-    
-    recompressed_path = 'recompressed_image.jpg'
-    original.save(recompressed_path, 'JPEG', quality=50)
-    
-    recompressed = Image.open(recompressed_path)
-    diff = ImageChops.difference(original, recompressed)
-    diff = diff.convert("L")
-    diff_np = np.array(diff)
-    diff_np = np.log1p(diff_np)
-    
-    plt.imshow(diff_np, cmap='hot')
-    plt.savefig(output_path)
-    plt.close()
+    try:
+        original = Image.open(image_path)
+
+        # Convert image to RGB mode if it contains an alpha channel (RGBA)
+        if original.mode in ['RGBA', 'P']:  
+            original = original.convert('RGB')
+
+        recompressed_path = 'recompressed_image.jpg'
+        original.save(recompressed_path, 'JPEG', quality=50)
+
+        recompressed = Image.open(recompressed_path)
+        diff = ImageChops.difference(original, recompressed)
+        diff = diff.convert("L")
+        diff_np = np.array(diff)
+        diff_np = np.log1p(diff_np)
+
+        plt.imshow(diff_np, cmap='hot')
+        plt.savefig(output_path)
+        plt.close()
+
+    except Exception as e:
+        print(f"Error in ELA: {e}")
+        return None
 
 def jpeg_compression_analysis(image_path, output_path):
-    original = Image.open(image_path)
-    original_np = np.array(original)
-    original.save('compressed_image.jpg', 'JPEG', quality=30)
-    compressed = Image.open('compressed_image.jpg')
-    compressed_np = np.array(compressed)
-    difference = np.abs(original_np - compressed_np)
-    plt.imshow(difference, cmap='gray')
-    plt.savefig(output_path)
-    plt.close()
+    try:
+        original = Image.open(image_path)
+
+        # Convert to RGB if not already
+        if original.mode in ('RGBA', 'P'):
+            original = original.convert('RGB')
+
+        original_np = np.array(original)
+
+        original.save('compressed_image.jpg', 'JPEG', quality=30)
+        compressed = Image.open('compressed_image.jpg')
+        compressed_np = np.array(compressed)
+
+        # Ensure both arrays have the same shape
+        min_shape = np.minimum(original_np.shape, compressed_np.shape)
+        original_np = original_np[:min_shape[0], :min_shape[1], ...]
+        compressed_np = compressed_np[:min_shape[0], :min_shape[1], ...]
+
+        difference = np.abs(original_np - compressed_np)
+        plt.imshow(difference, cmap='gray')
+        plt.savefig(output_path)
+        plt.close()
+
+    except Exception as e:
+        print(f"Error in JPEG Compression Analysis: {e}")
+        return None
+
 
 def noise_analysis(image_path, output_path):
     original = cv2.imread(image_path)
@@ -791,14 +818,23 @@ def media_image(request):
 
         # Get model prediction
         image_label, image_confidence = check_fake_or_real(image_file_path)
+        print(image_label, image_confidence, "image_file_path)")
+        confidence_score = float(image_confidence[0])
+        # Convert confidence to percentage
+        if image_label == 'Real':
+            # For real, show confidence directly (0.5-1.0 becomes 50%-100%)
+            confidence_percentage = round(confidence_score * 100, 2)
+        else:
+            # For fake, show inverted confidence (0.0-0.5 becomes 100%-50%)
+            confidence_percentage = round((1 - confidence_score) * 100, 2)
+            print(confidence_percentage, "confidence_percentage")
 
-        # Create MediaFile instance
         media_file = MediaFile.objects.create(
             user=request.user,
             file=image_file,
             media_type='image',
             prediction=image_label,
-            confidence=float(image_confidence[0]),
+            confidence=confidence_percentage,  # Now storing percentage
             metadata=metadata,
         )
 
@@ -826,7 +862,7 @@ def media_image(request):
             'jpeg_image_url': media_file.jpeg_image.url,
             'noise_image_url': media_file.noise_image.url,
             'label': image_label,
-            'confidence': float(image_confidence[0])
+            'confidence': confidence_percentage
         }
 
         return JsonResponse(data)
@@ -853,8 +889,10 @@ def media_video(request):
 
             # Process the video
             video_label, video_confidence = detect_video(temp_video_path)
-            media_file.prediction = video_label
-            media_file.confidence = float(video_confidence[0])
+            confidence_percentages = [round(conf * 100, 2) for conf in video_confidence]
+            media_file.confidence = confidence_percentages[0]
+
+            print(video_label, confidence_percentages, "temp_video_path)")
 
             # Perform additional analysis (e.g., metadata extraction, frame analysis)
             metadata = get_video_metadata(temp_video_path)
@@ -871,7 +909,7 @@ def media_video(request):
                 'metadata': metadata,
                 'frame_analysis_url': media_file.frame_analysis_image.url,
                 'label': video_label,
-                'confidence': float(max(video_confidence))
+                'confidence': float(max(confidence_percentages))  # max percentage value
             })
 
         except Exception as e:
@@ -899,8 +937,16 @@ def media_audio(request):
             # Process the audio
             audio_label, audio_confidence = detect_audio(temp_audio_path)
             media_file.prediction = audio_label
-            media_file.confidence = float(audio_confidence[0])
-
+            confidence_score = float(audio_confidence[0])
+            if audio_label == 'Bonafide':
+            # For real, show confidence directly (0.5-1.0 becomes 50%-100%)
+                confidence_percentage = round(confidence_score * 100, 2)
+                media_file.confidence=confidence_percentage
+            else:
+                # For fake, show inverted confidence (0.0-0.5 becomes 100%-50%)
+                confidence_percentage = round((1 - confidence_score) * 100, 2)
+                media_file.confidence=confidence_percentage
+            print(audio_label, audio_confidence, "temp_audio_path)")
             # Perform additional analysis (e.g., waveform visualization, spectrogram)
             waveform_path = visualize_waveform(temp_audio_path)
             with open(waveform_path, 'rb') as f:
@@ -918,7 +964,7 @@ def media_audio(request):
                 'waveform_url': media_file.waveform_image.url,
                 'spectrogram_url': media_file.spectrogram_image.url,
                 'label': audio_label,
-                'confidence': float(audio_confidence[0])
+                'confidence': confidence_percentage
             })
 
         except Exception as e:

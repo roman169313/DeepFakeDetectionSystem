@@ -6,6 +6,11 @@
     td{
         line-break: anywhere;
     }
+    #video-preview {
+        max-width: 100%;
+        margin-top: 1rem;
+        display: none;
+    }
 </style>
 <div class="min-h-screen flex items-center justify-center">
     <div class="max-w-md mx-auto p-8 bg-white shadow-md rounded-lg form-container">
@@ -15,6 +20,14 @@
         <form id="deepfake-upload-form" method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
             {{ form.as_p }}
+            {% if form.file.errors %}
+            <div class="text-red-500">{{ form.file.errors }}</div>
+        {% endif %}
+        <div id="video-container">
+            <video id="video-preview" controls>
+                Your browser does not support the video tag.
+            </video>
+        </div>
             <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gradient-to-r hover:from-indigo-600 hover:to-pink-600 transition duration-300 flex items-center justify-center">
                 <span id="button-text">Analyze</span>
                 <span id="button-loader" class="hidden ml-2">
@@ -54,6 +67,16 @@
 </div>
 
 <script>
+    document.getElementById('id_file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.includes('video')) {
+            const videoPreview = document.getElementById('video-preview');
+            const videoURL = URL.createObjectURL(file);
+            
+            videoPreview.src = videoURL;
+            videoPreview.style.display = 'block';
+        }
+    });
            function formatMetadataAsTable(metadata) {
     let table = '<table class="min-w-full border-collapse border border-gray-300">';
     table += '<thead><tr><th class="border border-gray-300 px-4 py-2">Key</th><th class="border border-gray-300 px-4 py-2">Value</th></tr></thead>';

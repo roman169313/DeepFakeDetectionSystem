@@ -4,13 +4,16 @@
 {% block content %}
 
 <div class="min-h-screen flex items-center justify-center">
-    <div class="max-w-md mx-auto p-8 bg-white shadow-md rounded-lg form-container">
+    <div class="max-w-4xl mx-auto p-8 bg-white shadow-md rounded-lg form-container"> <!-- Increased max-width -->
         <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Deepfake Detector</h1>
         <p class="text-gray-600 mb-8 text-center">Upload an image to check for deepfake manipulation.</p>
 
         <form id="deepfake-upload-form" method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
             {{ form.as_p }}
+            {% if form.file.errors %}
+            <div class="text-red-500">{{ form.file.errors }}</div>
+        {% endif %}
             <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gradient-to-r hover:from-indigo-600 hover:to-pink-600 transition duration-300 flex items-center justify-center">
                 <span id="button-text">Analyze</span>
                 <span id="button-loader" class="hidden ml-2">
@@ -24,6 +27,12 @@
 
         <div id="results-container" class="mt-8">
             <h2 class="text-2xl font-semibold mb-4 text-gray-800">Detection Results</h2>
+            
+            <!-- Preview of uploaded image -->
+            <div id="uploaded-preview" class="hidden mb-6">
+                <h3 class="text-xl font-semibold mb-2">Uploaded Image</h3>
+                <img id="uploaded-image" src="#" alt="Uploaded Image Preview" class="max-w-full h-auto rounded-lg shadow-lg border border-gray-200">
+            </div>
             
             <!-- Enhanced Loading Animation -->
             <div id="wait" class="hidden">
@@ -39,21 +48,37 @@
             </div>
             
             <div id="error" class="p-6 bg-red-100 text-red-500 font-medium rounded-lg hidden"></div>
-            <div id="response" class="p-6 bg-gray-100 rounded-lg hidden">
-                <h3 class="text-xl font-semibold mb-2">Metadata</h3>
-                <p id="metadata" class="bg-white p-4 rounded-lg shadow-sm"></p>
+            <div id="response" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-6">
+                        <div class="p-6 bg-gray-100 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-2">Metadata</h3>
+                            <div id="metadata" class="bg-white p-4 rounded-lg shadow-sm overflow-x-auto"></div>
+                        </div>
 
-                <h3 class="text-xl font-semibold mb-2">Error Level Analysis (ELA)</h3>
-                <img id="ela-image" src="" alt="ELA Image" class="w-full rounded-lg shadow-sm">
+                        <div class="p-6 bg-gray-100 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-2">Model Prediction</h3>
+                            <p id="prediction" class="text-lg font-medium bg-white p-4 rounded-lg shadow-sm"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="p-6 bg-gray-100 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-2">Error Level Analysis (ELA)</h3>
+                            <img id="ela-image" src="" alt="ELA Image" class="w-full rounded-lg shadow-sm hover:scale-105 transition-transform duration-300 cursor-zoom-in">
+                        </div>
 
-                <h3 class="text-xl font-semibold mb-2">JPEG Compression Analysis</h3>
-                <img id="jpeg-image" src="" alt="JPEG Image" class="w-full rounded-lg shadow-sm">
+                        <div class="p-6 bg-gray-100 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-2">JPEG Compression Analysis</h3>
+                            <img id="jpeg-image" src="" alt="JPEG Image" class="w-full rounded-lg shadow-sm hover:scale-105 transition-transform duration-300 cursor-zoom-in">
+                        </div>
 
-                <h3 class="text-xl font-semibold mb-2">Noise Analysis</h3>
-                <img id="noise-image" src="" alt="Noise Image" class="w-full rounded-lg shadow-sm">
-
-                <h3 class="text-xl font-semibold mb-2">Model Prediction</h3>
-                <p id="prediction" class="text-lg font-medium"></p>
+                        <div class="p-6 bg-gray-100 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-2">Noise Analysis</h3>
+                            <img id="noise-image" src="" alt="Noise Image" class="w-full rounded-lg shadow-sm hover:scale-105 transition-transform duration-300 cursor-zoom-in">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -84,29 +109,52 @@
         transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         transition-duration: 300ms;
     }
-    td{
+    
+    td {
         line-break: anywhere;
+    }
+    
+    /* Image preview styling */
+    #uploaded-image {
+        max-height: 400px;
+        object-fit: contain;
     }
 </style>
 
 <script>
-        function formatMetadataAsTable(metadata) {
-    let table = '<table class="min-w-full border-collapse border border-gray-300">';
-    table += '<thead><tr><th class="border border-gray-300 px-4 py-2">Key</th><th class="border border-gray-300 px-4 py-2">Value</th></tr></thead>';
-    table += '<tbody>';
-    
-    for (const [key, value] of Object.entries(metadata)) {
-        table += `<tr><td class="border border-gray-300 px-4 py-2 font-medium">${key}</td><td class="border border-gray-300 px-4 py-2">${value}</td></tr>`;
+    // Show preview of uploaded image
+    document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const preview = document.getElementById('uploaded-image');
+                preview.src = event.target.result;
+                document.getElementById('uploaded-preview').classList.remove('hidden');
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function formatMetadataAsTable(metadata) {
+        let table = '<table class="min-w-full border-collapse border border-gray-300">';
+        table += '<thead><tr><th class="border border-gray-300 px-4 py-2">Key</th><th class="border border-gray-300 px-4 py-2">Value</th></tr></thead>';
+        table += '<tbody>';
+        
+        for (const [key, value] of Object.entries(metadata)) {
+            table += `<tr><td class="border border-gray-300 px-4 py-2 font-medium">${key}</td><td class="border border-gray-300 px-4 py-2">${value}</td></tr>`;
+        }
+        
+        table += '</tbody></table>';
+        return table;
     }
-    
-    table += '</tbody></table>';
-    return table;
-}
+
     document.getElementById('deepfake-upload-form').addEventListener('submit', function (e) {
         e.preventDefault();
 
         const formData = new FormData(this);
-        formData.append('media_type', 'image'); // Ensure media_type is set to 'image'
+        formData.append('media_type', 'image');
         const resultsContainer = document.getElementById('results-container');
         const wait = document.getElementById('wait');
         const responseDiv = document.getElementById('response');
@@ -145,12 +193,7 @@
             // Update results
             const metadataElement = document.getElementById('metadata');
             if (metadataElement) {
-                
-// Inject formatted metadata into the UI
-metadataElement.textContent = JSON.stringify(data.metadata, null, 2);
-     
-// Inject formatted metadata into the UI
-metadataElement.innerHTML = formatMetadataAsTable(data.metadata);
+                metadataElement.innerHTML = formatMetadataAsTable(data.metadata);
             }
 
             const elaImage = document.getElementById('ela-image');
@@ -163,7 +206,7 @@ metadataElement.innerHTML = formatMetadataAsTable(data.metadata);
 
             const predictionElement = document.getElementById('prediction');
             if (predictionElement) {
-                predictionElement.textContent = `Label: ${data['label']}, Confidence: ${data['confidence']}`;
+                predictionElement.textContent = `Label: ${data['label']}, Confidence: ${data['confidence'] * 100}%`;
             }
         })
         .catch(error => {
