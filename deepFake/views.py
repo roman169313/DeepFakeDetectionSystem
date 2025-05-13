@@ -782,94 +782,110 @@ from django.core.files import File
 def media_image(request):
     if request.method == 'POST' and request.FILES.get('file'):
         image_file = request.FILES['file']
+        temp_file_path = None
+        ela_path = None
+        jpeg_path = None
+        noise_path = None
 
-        # Handle both in-memory and temporary file uploads
-        if isinstance(image_file, TemporaryUploadedFile):
-            image_file_path = image_file.temporary_file_path()
-        else:
-            # Save the in-memory file to a temporary file
-            temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_uploads")
-            os.makedirs(temp_dir, exist_ok=True)
+        try:
+            # Handle both in-memory and temporary file uploads
+            if isinstance(image_file, TemporaryUploadedFile):
+                image_file_path = image_file.temporary_file_path()
+            else:
+                # Save the in-memory file to a temporary file
+                temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_uploads")
+                os.makedirs(temp_dir, exist_ok=True)
+                image_file_path = os.path.join(temp_dir, image_file.name)
+                temp_file_path = image_file_path
+                with open(image_file_path, "wb") as f:
+                    for chunk in image_file.chunks():
+                        f.write(chunk)
 
-            image_file_path = os.path.join(temp_dir, image_file.name)
-            with open(image_file_path, "wb") as f:
-                for chunk in image_file.chunks():
-                    f.write(chunk)
+            # Get metadata
+            metadata = get_image_metadata(image_file_path)
+            metadata = {key: convert_ifd_rational(value) for key, value in metadata.items()}
 
-        # Get metadata
-        metadata = get_image_metadata(image_file_path)
-        metadata = {key: convert_ifd_rational(value) for key, value in metadata.items()}
+            # Perform analyses
+            ela_filename = f'ela_{uuid.uuid4()}.png'
+            ela_path = os.path.join(settings.MEDIA_ROOT, 'temp', ela_filename)
+            os.makedirs(os.path.dirname(ela_path), exist_ok=True)
+            error_level_analysis(image_file_path, ela_path)
 
-        # Perform ELA
-        ela_filename = f'ela_{uuid.uuid4()}.png'
-        ela_path = os.path.join(settings.MEDIA_ROOT, 'temp', ela_filename)
-        os.makedirs(os.path.dirname(ela_path), exist_ok=True)
-        error_level_analysis(image_file_path, ela_path)
+            jpeg_filename = f'jpeg_{uuid.uuid4()}.png'
+            jpeg_path = os.path.join(settings.MEDIA_ROOT, 'temp', jpeg_filename)
+            jpeg_compression_analysis(image_file_path, jpeg_path)
 
-        # Perform JPEG compression analysis
-        jpeg_filename = f'jpeg_{uuid.uuid4()}.png'
-        jpeg_path = os.path.join(settings.MEDIA_ROOT, 'temp', jpeg_filename)
-        jpeg_compression_analysis(image_file_path, jpeg_path)
+            noise_filename = f'noise_{uuid.uuid4()}.png'
+            noise_path = os.path.join(settings.MEDIA_ROOT, 'temp', noise_filename)
+            noise_analysis(image_file_path, noise_path)
 
-        # Perform noise analysis
-        noise_filename = f'noise_{uuid.uuid4()}.png'
-        noise_path = os.path.join(settings.MEDIA_ROOT, 'temp', noise_filename)
-        noise_analysis(image_file_path, noise_path)
+            # Get model prediction
+            image_label, image_confidence = check_fake_or_real(image_file_path)
+            confidence_score = float(image_confidence[0])
+            confidence_percentage = round((confidence_score if image_label == 'Real' else (1 - confidence_score)) * 100, 2)
 
-        # Get model prediction
-        image_label, image_confidence = check_fake_or_real(image_file_path)
-        print(image_label, image_confidence, "image_file_path)")
-        confidence_score = float(image_confidence[0])
-        # Convert confidence to percentage
-        if image_label == 'Real':
-            # For real, show confidence directly (0.5-1.0 becomes 50%-100%)
-            confidence_percentage = round(confidence_score * 100, 2)
-        else:
-            # For fake, show inverted confidence (0.0-0.5 becomes 100%-50%)
-            confidence_percentage = round((1 - confidence_score) * 100, 2)
-            print(confidence_percentage, "confidence_percentage")
+            # Create media file
+            media_file = MediaFile.objects.create(
+                user=request.user,
+                file=image_file,
+                media_type='image',
+                prediction=image_label,
+                confidence=confidence_percentage,
+                metadata=metadata,
+            )
 
-        media_file = MediaFile.objects.create(
-            user=request.user,
-            file=image_file,
-            media_type='image',
-            prediction=image_label,
-            confidence=confidence_percentage,  # Now storing percentage
-            metadata=metadata,
-        )
+            # Save processed images
+            with open(ela_path, 'rb') as f:
+                media_file.ela_image.save(ela_filename, File(f))
+            with open(jpeg_path, 'rb') as f:
+                media_file.jpeg_image.save(jpeg_filename, File(f))
+            with open(noise_path, 'rb') as f:
+                media_file.noise_image.save(noise_filename, File(f))
 
-        # Save processed images
-        with open(ela_path, 'rb') as f:
-            media_file.ela_image.save(ela_filename, File(f))
-        os.remove(ela_path)  # Cleanup temp file
+            media_file.save()
 
-        with open(jpeg_path, 'rb') as f:
-            media_file.jpeg_image.save(jpeg_filename, File(f))
-        os.remove(jpeg_path)  # Cleanup temp file
+            return JsonResponse({
+                'result_id': media_file.id,  # Include result ID
+                'metadata': metadata,
+                'ela_image_url': media_file.ela_image.url,
+                'jpeg_image_url': media_file.jpeg_image.url,
+                'noise_image_url': media_file.noise_image.url,
+                'label': image_label,
+                'confidence': confidence_percentage,
+                'report_url': f'/results/{media_file.id}'  # Optional direct report URL
+            })
 
-        with open(noise_path, 'rb') as f:
-            media_file.noise_image.save(noise_filename, File(f))
-        os.remove(noise_path)  # Cleanup temp file
+        except Exception as e:
+            # Clean up temporary files if error occurs
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            if ela_path and os.path.exists(ela_path):
+                os.remove(ela_path)
+            if jpeg_path and os.path.exists(jpeg_path):
+                os.remove(jpeg_path)
+            if noise_path and os.path.exists(noise_path):
+                os.remove(noise_path)
+                
+            return JsonResponse({
+                'error': str(e),
+                'status': 'error'
+            }, status=400)
 
-        # Cleanup temporary uploaded file (if it was in-memory)
-        if not isinstance(image_file, TemporaryUploadedFile):
-            os.remove(image_file_path)
-
-        # Prepare data to return
-        data = {
-            'metadata': metadata,
-            'ela_image_url': media_file.ela_image.url,
-            'jpeg_image_url': media_file.jpeg_image.url,
-            'noise_image_url': media_file.noise_image.url,
-            'label': image_label,
-            'confidence': confidence_percentage
-        }
-
-        return JsonResponse(data)
-
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+        finally:
+            # Ensure cleanup of temporary files
+            if temp_file_path and os.path.exists(temp_file_path) and not isinstance(image_file, TemporaryUploadedFile):
+                os.remove(temp_file_path)
+            if ela_path and os.path.exists(ela_path):
+                os.remove(ela_path)
+            if jpeg_path and os.path.exists(jpeg_path):
+                os.remove(jpeg_path)
+            if noise_path and os.path.exists(noise_path):
+                os.remove(noise_path)
 def media_video(request):
     if request.method == 'POST':
+        temp_video_path = None
+        frame_analysis_path = None
+        
         try:
             video_file = request.FILES['file']
             media_file = MediaFile.objects.create(
@@ -889,32 +905,47 @@ def media_video(request):
 
             # Process the video
             video_label, video_confidence = detect_video(temp_video_path)
+            media_file.prediction = video_label
             confidence_percentages = [round(conf * 100, 2) for conf in video_confidence]
-            media_file.confidence = confidence_percentages[0]
+            media_file.confidence = float(max(confidence_percentages))  # Store max confidence
 
-            print(video_label, confidence_percentages, "temp_video_path)")
-
-            # Perform additional analysis (e.g., metadata extraction, frame analysis)
+            # Perform additional analysis
             metadata = get_video_metadata(temp_video_path)
             media_file.metadata = metadata
 
             frame_analysis_path = analyze_video_frames(temp_video_path)
             with open(frame_analysis_path, 'rb') as f:
                 media_file.frame_analysis_image.save(f'frame_analysis_{uuid.uuid4()}.png', File(f))
-            os.remove(frame_analysis_path)  # Cleanup temp file
 
             media_file.save()
 
             return JsonResponse({
+                'result_id': media_file.id,  # Include result ID
                 'metadata': metadata,
                 'frame_analysis_url': media_file.frame_analysis_image.url,
                 'label': video_label,
-                'confidence': float(max(confidence_percentages))  # max percentage value
+                'confidence': float(max(confidence_percentages)),
+                'report_url': f'/results/{media_file.id}'  # Optional direct report URL
             })
 
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            # Clean up temporary files if error occurs
+            if temp_video_path and os.path.exists(temp_video_path):
+                os.remove(temp_video_path)
+            if frame_analysis_path and os.path.exists(frame_analysis_path):
+                os.remove(frame_analysis_path)
+                
+            return JsonResponse({
+                'error': str(e),
+                'status': 'error'
+            }, status=500)
 
+        finally:
+            # Ensure cleanup of temporary files
+            if temp_video_path and os.path.exists(temp_video_path):
+                os.remove(temp_video_path)
+            if frame_analysis_path and os.path.exists(frame_analysis_path):
+                os.remove(frame_analysis_path)
 def media_audio(request):
     if request.method == 'POST':
         try:
@@ -961,6 +992,7 @@ def media_audio(request):
             media_file.save()
 
             return JsonResponse({
+                'result_id': media_file.id,
                 'waveform_url': media_file.waveform_image.url,
                 'spectrogram_url': media_file.spectrogram_image.url,
                 'label': audio_label,
@@ -968,4 +1000,24 @@ def media_audio(request):
             })
 
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            # Clean up any temporary files if an error occurs
+            if temp_audio_path and os.path.exists(temp_audio_path):
+                os.remove(temp_audio_path)
+            if waveform_path and os.path.exists(waveform_path):
+                os.remove(waveform_path)
+            if spectrogram_path and os.path.exists(spectrogram_path):
+                os.remove(spectrogram_path)
+                
+            return JsonResponse({
+                'error': str(e),
+                'status': 'error'
+            }, status=500)
+
+        finally:
+            # Ensure temporary files are cleaned up
+            if temp_audio_path and os.path.exists(temp_audio_path):
+                os.remove(temp_audio_path)
+            if waveform_path and os.path.exists(waveform_path):
+                os.remove(waveform_path)
+            if spectrogram_path and os.path.exists(spectrogram_path):
+                os.remove(spectrogram_path)

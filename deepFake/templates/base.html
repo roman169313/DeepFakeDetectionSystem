@@ -34,26 +34,39 @@
     <div id="particles-js"></div>
 
     <!-- Navbar (Ensures visibility above particles.js) -->
-    <nav class="bg-gradient-to-r from-blue-500 to-purple-600 p-4 flex justify-between items-center shadow-lg">
-        <a href="/" class="text-white text-lg font-bold">Deep Fake Detection</a>
-        {% if user.is_authenticated and user.is_superuser %}
-            <a href="{% url 'users' %}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                Users
+    <nav class="bg-gradient-to-r from-blue-500 to-purple-600 p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <!-- Logo/Brand -->
+            <a href="/" class="text-white text-xl font-bold flex items-center space-x-2 hover:text-blue-100 transition-colors">
+                <i class="fas fa-shield-alt"></i>
+                <span>DeepFake Detection</span>
             </a>
-        {% endif %}
-        {% if user.is_authenticated %}
-            <form method="POST" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button type="submit" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                    Logout
-                </button>
-            </form>
-        {% else %}
-        
-            <a href="{% url 'login' %}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                Login
-            </a>
-        {% endif %}
+    
+            <!-- Navigation Links -->
+            <div class="flex items-center space-x-4">
+                {% if user.is_authenticated and user.is_superuser %}
+                    <a href="{% url 'users' %}" class="bg-white/20 hover:bg-white/30 text-white font-medium py-2 px-4 rounded-lg transition-all flex items-center space-x-2">
+                        <i class="fas fa-users"></i>
+                        <span>Users</span>
+                    </a>
+                {% endif %}
+                
+                {% if user.is_authenticated %}
+                    <form method="POST" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-white/10 hover:bg-white/20 text-white font-medium py-2 px-4 rounded-lg transition-all flex items-center space-x-2">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="bg-white/20 hover:bg-white/30 text-white font-medium py-2 px-4 rounded-lg transition-all flex items-center space-x-2">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Login</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
     </nav>
 
     <!-- Page Content -->

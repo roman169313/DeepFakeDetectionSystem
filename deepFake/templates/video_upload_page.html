@@ -53,6 +53,13 @@
             </div>
             <div id="error" class="p-6 bg-red-100 text-red-500 font-medium rounded-lg hidden"></div>
             <div id="response" class="p-6 bg-gray-100 rounded-lg hidden">
+                <div id="download-buttons" class="flex justify-between mt-6 mb-8 hidden">
+                    <a href="#" target="_blank" id="pdf-download" 
+                       class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out">
+                        Download report PDF
+                    </a>
+                    
+                </div>
                 <h3 class="text-xl font-semibold mb-2">Metadata</h3>
                 <p id="metadata" class="bg-white p-4 rounded-lg shadow-sm"></p>
 
@@ -143,8 +150,16 @@ metadata.innerHTML = formatMetadataAsTable(data.metadata);
                 frameImage.src = data.frame_analysis_url;
                 frameImage.classList.remove('hidden');
             }
-
-            prediction.textContent = `Label: ${data.label}, Confidence: ${data.confidence.toFixed(2)}`;
+            if (data.result_id) {
+        const downloadButtons = document.getElementById('download-buttons');
+        const pdfDownload = document.getElementById('pdf-download');
+        
+        pdfDownload.href = `/export/pdf/${data.result_id}`;
+        
+        
+        downloadButtons.classList.remove('hidden');
+    }
+            prediction.textContent = `Label: ${data.label}, Confidence: ${data.confidence.toFixed(2)}%`;
         } catch (error) {
             buttonText.textContent = 'Analyze';
             buttonLoader.classList.add('hidden');
