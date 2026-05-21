@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import importlib.util
 import os
 import sys
 
@@ -45,7 +46,7 @@ SECRET_KEY = os.environ.get(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = _env_bool('DJANGO_DEBUG', default=True)
+DEBUG = _env_bool('DJANGO_DEBUG', default=False)
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -66,12 +67,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
+def _module_installed(name: str) -> bool:
+    return importlib.util.find_spec(name) is not None
+
+
 if DEBUG:
-    INSTALLED_APPS += [
-        'livereload',
-        'tailwind',
-        'django_browser_reload',
-    ]
+    for _dev_app in ('livereload', 'tailwind', 'django_browser_reload'):
+        if _module_installed(_dev_app):
+            INSTALLED_APPS.append(_dev_app)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -88,8 +91,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-if DEBUG:
+if DEBUG and _module_installed('livereload'):
     MIDDLEWARE.insert(2, 'livereload.middleware.LiveReloadScript')
+if DEBUG and _module_installed('django_browser_reload'):
     MIDDLEWARE.append('django_browser_reload.middleware.BrowserReloadMiddleware')
 
 ROOT_URLCONF = 'deepFakeDetection.urls'
