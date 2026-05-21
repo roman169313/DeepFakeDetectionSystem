@@ -9,6 +9,8 @@
             <p>Upload a video for frame analysis and deepfake detection.</p>
         </header>
 
+        {% include 'includes/video_accuracy_notice.html' %}
+
         <div class="glass-card upload-card">
             <form id="deepfake-upload-form" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
@@ -40,6 +42,7 @@
                         <div class="result-box">
                             <h3>Prediction</h3>
                             <p id="prediction"></p>
+                            <div id="video-disclaimer" class="notice-banner notice-banner--compact hidden" role="note" style="margin-top:0.75rem;margin-bottom:0;"></div>
                         </div>
                         <div class="result-box">
                             <h3>Metadata</h3>
@@ -115,6 +118,13 @@
             const label = data.label || '—';
             document.getElementById('prediction').innerHTML =
                 `<span class="prediction-badge prediction-badge--${String(label).toLowerCase() === 'real' ? 'real' : 'fake'}">${label}</span> · ${(data.confidence ?? 0).toFixed?.(2) ?? data.confidence}%`;
+            const disclaimerEl = document.getElementById('video-disclaimer');
+            if (data.disclaimer) {
+                disclaimerEl.textContent = data.disclaimer;
+                disclaimerEl.classList.remove('hidden');
+            } else {
+                disclaimerEl.classList.add('hidden');
+            }
 
             if (data.result_id) {
                 document.getElementById('pdf-download').href = `/export/pdf/${data.result_id}`;

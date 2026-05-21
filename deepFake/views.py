@@ -44,6 +44,13 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
 from django.utils import timezone  # Add this import at the top
 from django.conf import settings  # A
+
+VIDEO_ML_DISCLAIMER = (
+    'Video deepfake scores are less accurate than image or audio checks. '
+    'The video model was trained on limited data—use predictions as guidance only.'
+)
+
+
 @login_required
 def results_history(request):
     results = MediaFile.objects.filter(user=request.user).order_by('-uploaded_at')
@@ -273,6 +280,8 @@ def export_result_pdf(request, result_id):
     draw_key_value("Upload Date", result.uploaded_at.strftime('%Y-%m-%d %H:%M'))
     draw_key_value("Prediction", result.prediction, important=True)
     draw_key_value("Confidence Score", f"{result.confidence:.2f}%", important=True)
+    if result.media_type == 'video':
+        draw_key_value("Accuracy note", VIDEO_ML_DISCLAIMER)
     y_offset -= section_spacing
 
     # Technical Metadata Section
@@ -945,6 +954,7 @@ def media_video(request):
                 'frame_analysis_url': media_file.frame_analysis_image.url,
                 'label': video_label,
                 'confidence': float(max(confidence_percentages)),
+                'disclaimer': VIDEO_ML_DISCLAIMER,
                 'report_url': f'/results/{media_file.id}'  # Optional direct report URL
             })
 
