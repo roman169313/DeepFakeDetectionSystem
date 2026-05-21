@@ -6,9 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}DeepFake Detection{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <!-- Fallback if collectstatic/CSS path fails on server -->
+    <style>
+      body { margin: 0; background: #06080f; color: #e8ecf4; font-family: 'DM Sans', system-ui, sans-serif; }
+      #particles-js { position: fixed; inset: 0; z-index: 1; pointer-events: none !important; }
+      .app-shell { position: relative; z-index: 5; min-height: 100vh; }
+    </style>
+    <link rel="stylesheet" href="{% static 'style.css' %}?v=4">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -88,8 +95,8 @@
         {% endblock %}
     </div>
 
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <script src="{% static 'particles.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js" crossorigin="anonymous"></script>
+    <script src="{% static 'particles.js' %}?v=4"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

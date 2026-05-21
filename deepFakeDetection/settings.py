@@ -229,6 +229,7 @@ STORAGES = {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+        # Plain storage — reliable paths (style.css stays style.css after collectstatic)
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
     },
 }
