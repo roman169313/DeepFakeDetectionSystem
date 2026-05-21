@@ -1,10 +1,13 @@
 """
-ML inference helpers. Models load lazily (first upload only) so Django
-management commands (migrate, createsuperuser) work without loading TensorFlow.
+ML inference helpers. Models load lazily on first prediction.
+
+.h5 files were saved with Keras 3 (DTypePolicy) — use standalone `keras` package,
+not tf_keras / TF_USE_LEGACY_KERAS.
 """
 import os
 
-os.environ.setdefault('TF_USE_LEGACY_KERAS', '1')
+# Do NOT set TF_USE_LEGACY_KERAS — it forces tf_keras 2.x and breaks Keras 3 saves
+os.environ.pop('TF_USE_LEGACY_KERAS', None)
 os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
 
 import numpy as np
@@ -17,14 +20,22 @@ _INCEPTION_BASE = None
 _LEGACY_OBJECTS = None
 
 
+def _keras_image_utils():
+    import keras
+    if hasattr(keras.utils, 'load_img'):
+        return keras.utils.load_img, keras.utils.img_to_array
+    from tensorflow.keras.preprocessing.image import load_img, img_to_array
+    return load_img, img_to_array
+
+
 def _legacy_custom_objects():
-    """Keras 3 / tf_keras reject batch_shape; old .h5 files still use it."""
+    """Some layers still use batch_shape from older saves."""
     global _LEGACY_OBJECTS
     if _LEGACY_OBJECTS is not None:
         return _LEGACY_OBJECTS
 
     BaseInput = None
-    for mod_path in ('tf_keras.layers', 'keras.layers', 'tensorflow.keras.layers'):
+    for mod_path in ('keras.layers', 'keras.src.layers', 'tf_keras.layers'):
         try:
             mod = __import__(mod_path, fromlist=['InputLayer'])
             BaseInput = mod.InputLayer
@@ -51,35 +62,30 @@ def _legacy_custom_objects():
 
 
 def _load_keras_model(path):
-    custom_objects = _legacy_custom_objects()
+    """Load .h5 with Keras 3 (matches DTypePolicy in saved weights)."""
     errors = []
+    os.environ.pop('TF_USE_LEGACY_KERAS', None)
 
     try:
-        import tf_keras
-        return tf_keras.models.load_model(
-            path, compile=False, custom_objects=custom_objects,
-        )
+        import keras
+        return keras.models.load_model(path, compile=False, safe_mode=False)
     except Exception as exc:
-        errors.append(f'tf_keras: {exc}')
+        errors.append(f'keras3: {exc}')
 
     try:
-        import tensorflow as tf
-        return tf.keras.models.load_model(
-            path, compile=False, custom_objects=custom_objects,
+        import keras
+        return keras.models.load_model(
+            path,
+            compile=False,
+            safe_mode=False,
+            custom_objects=_legacy_custom_objects(),
         )
-    except TypeError:
-        try:
-            import tensorflow as tf
-            return tf.keras.models.load_model(
-                path, compile=False, custom_objects=custom_objects, safe_mode=False,
-            )
-        except Exception as exc2:
-            errors.append(f'tf.keras safe_mode=False: {exc2}')
     except Exception as exc:
-        errors.append(f'tf.keras: {exc}')
+        errors.append(f'keras3+legacy InputLayer: {exc}')
 
     raise RuntimeError(
-        'Could not load Keras model. ' + ' | '.join(errors)
+        'Could not load model. Install: pip install "keras>=3.4.1,<4". '
+        'Remove TF_USE_LEGACY_KERAS from .env and PM2. Errors: ' + ' | '.join(errors)
     )
 
 
@@ -104,25 +110,15 @@ def _get_video_model():
 def _get_inception_base():
     global _INCEPTION_BASE
     if _INCEPTION_BASE is None:
-        try:
-            from tf_keras.applications import InceptionV3
-        except ImportError:
-            from tensorflow.keras.applications import InceptionV3
+        from keras.applications import InceptionV3
         _INCEPTION_BASE = InceptionV3(include_top=False, weights='imagenet', pooling='avg')
     return _INCEPTION_BASE
 
 
 def check_fake_or_real(file_path):
-    try:
-        from tf_keras.preprocessing import image as keras_image
-        img = keras_image.load_img(file_path, target_size=(224, 224))
-        img_array = keras_image.img_to_array(img)
-    except ImportError:
-        import tensorflow as tf
-        img = tf.keras.preprocessing.image.load_img(file_path, target_size=(224, 224))
-        img_array = tf.keras.preprocessing.image.img_to_array(img)
-
-    img_array = np.expand_dims(img_array, axis=0) / 255.0
+    load_img, img_to_array = _keras_image_utils()
+    img = load_img(file_path, target_size=(224, 224))
+    img_array = np.expand_dims(img_to_array(img), axis=0) / 255.0
     prediction = _get_image_model().predict(img_array, verbose=0)
     label = "Real" if prediction[0] >= 0.5 else "Fake"
     return label, prediction[0]

@@ -25,7 +25,6 @@ module.exports = {
       max_memory_restart: "3G",
       env: {
         DJANGO_SETTINGS_MODULE: "deepFakeDetection.settings",
-        TF_USE_LEGACY_KERAS: "1",
         TF_ENABLE_ONEDNN_OPTS: "0",
         TF_CPP_MIN_LOG_LEVEL: "2",
       },

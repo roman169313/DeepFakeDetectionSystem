@@ -33,7 +33,7 @@ whitenoise==6.8.2
 
 # --- ML / numerics (TensorFlow 2.15 keeps best compatibility with legacy .h5 models) ---
 tensorflow==2.15.1
-tf-keras==2.15.1
+keras>=3.4.1,<4
 numpy>=1.26.4,<2.0
 
 # --- Media processing ---

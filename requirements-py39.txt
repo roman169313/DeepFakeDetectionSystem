@@ -12,8 +12,8 @@ python-dotenv==1.0.1
 whitenoise==6.8.2
 
 tensorflow==2.15.1
-tf-keras==2.15.1
-# Required when TF_USE_LEGACY_KERAS=1 (legacy .h5 models)
+keras>=3.4.1,<4
+# .h5 models use Keras 3 (DTypePolicy) — do NOT use tf-keras or TF_USE_LEGACY_KERAS
 numpy>=1.26.4,<2.0
 
 opencv-python-headless==4.10.0.84
