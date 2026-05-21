@@ -21,6 +21,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / '.env')
 
+# PyMySQL: no system mariadb-devel required (set DB_USE_MYSQLCLIENT=1 to use mysqlclient instead)
+if os.environ.get('DB_USE_MYSQLCLIENT', '').lower() not in ('1', 'true', 'yes'):
+    try:
+        import pymysql
+        pymysql.version_info = (2, 2, 7, 'final', 0)
+        pymysql.install_as_MySQLdb()
+    except ImportError:
+        pass
+
 
 def _env_bool(name: str, default: bool = False) -> bool:
     return os.environ.get(name, str(default)).lower() in ('true', '1', 'yes')

@@ -34,6 +34,24 @@ pip install -r requirements.txt
 pip install -r requirements-py39.txt
 ```
 
+### Fix: `mysqlclient` / `pkg-config` / `Can not find valid pkg-config name`
+
+`requirements-py39.txt` and `requirements.txt` use **PyMySQL** (no compile). Pull latest code, then:
+
+```bash
+source venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements-py39.txt
+```
+
+If you prefer **mysqlclient**, install headers first then set `DB_USE_MYSQLCLIENT=1` in `.env`:
+
+```bash
+sudo dnf install mariadb-devel gcc python3-devel pkgconfig   # Alma/RHEL/CentOS
+# sudo apt install libmysqlclient-dev build-essential        # Ubuntu
+pip install mysqlclient
+```
+
 ## Quick start
 
 ```bash

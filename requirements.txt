@@ -19,12 +19,14 @@
 #   pip install -r requirements-dev.txt
 #
 # System packages (Linux VPS) — not installed by pip:
-#   sudo apt install python3-dev build-essential libmysqlclient-dev \
-#     ffmpeg libsndfile1 libgl1 libglib2.0-0 libimage-exiftool-perl exiv2
+#   sudo apt install python3-dev build-essential ffmpeg libsndfile1 libgl1 \
+#     libglib2.0-0 libimage-exiftool-perl exiv2
+# DB: uses PyMySQL (pip only). For mysqlclient instead: install mariadb-devel, then
+#   pip install mysqlclient && set DB_USE_MYSQLCLIENT=1 in .env
 
 # --- Web framework ---
 Django==5.1.5
-mysqlclient==2.2.7
+PyMySQL==1.1.1
 gunicorn==23.0.0
 python-dotenv==1.0.1
 whitenoise==6.8.2
