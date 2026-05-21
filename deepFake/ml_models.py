@@ -101,8 +101,8 @@ def _build_video_model():
     from keras import layers
 
     inp = layers.Input(shape=(20, 2048), name='input_3')
-    x = layers.GRU(16, return_sequences=True, name='gru')(inp)
-    x = layers.GRU(8, name='gru_1')(x)
+    x = layers.GRU(16, return_sequences=True, reset_after=True, name='gru')(inp)
+    x = layers.GRU(8, reset_after=True, name='gru_1')(x)
     x = layers.Dropout(0.5, name='dropout')(x)
     x = layers.Dense(8, activation='relu', name='dense')(x)
     out = layers.Dense(2, activation='softmax', name='dense_1')(x)
@@ -171,22 +171,36 @@ def detect_audio(file_path):
 
 
 def preprocess_video(video_path, frame_count=20, target_size=(299, 299)):
+    """Sample frames evenly; OpenCV frames are BGR → RGB for InceptionV3."""
     cap = cv2.VideoCapture(video_path)
+    total = max(int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0), 0)
     frames = []
 
-    while len(frames) < frame_count:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    def _append_frame(frame):
         frame = cv2.resize(frame, target_size)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frames.append(frame)
+
+    if total >= frame_count:
+        indices = np.linspace(0, total - 1, frame_count, dtype=int)
+        for idx in indices:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
+            ret, frame = cap.read()
+            if ret:
+                _append_frame(frame)
+    else:
+        while len(frames) < frame_count:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            _append_frame(frame)
 
     cap.release()
 
     while len(frames) < frame_count:
-        frames.append(np.zeros((target_size[0], target_size[1], 3)))
+        frames.append(np.zeros((target_size[0], target_size[1], 3), dtype=np.uint8))
 
-    return np.array(frames) / 255.0
+    return np.array(frames, dtype=np.float32) / 255.0
 
 
 def extract_features(frames, base_model):
@@ -199,6 +213,7 @@ def detect_video(video_path):
     frames = preprocess_video(video_path)
     features = extract_features(frames, _get_inception_base())
     predictions = _get_video_model().predict(features, verbose=0)
-    threshold = 0.5
-    predicted_label = "FAKE" if predictions[0][1] > threshold else "REAL"
-    return predicted_label, predictions[0]
+    probs = np.asarray(predictions[0], dtype=np.float64)
+    # Saved model: class 0 = FAKE, class 1 = REAL (softmax output order in .h5)
+    predicted_label = "REAL" if probs[1] >= probs[0] else "FAKE"
+    return predicted_label, probs
