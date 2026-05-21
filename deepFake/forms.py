@@ -7,33 +7,37 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 
 # Custom Login Form
+_INPUT = 'form-input'
+
 class UserLoginForm(AuthenticationForm):
     username = forms.CharField(widget=forms.TextInput(attrs={
-        'class': 'block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
-        'placeholder': 'Username'
+        'class': _INPUT,
+        'placeholder': 'Username',
+        'autocomplete': 'username',
     }))
     password = forms.CharField(widget=forms.PasswordInput(attrs={
-        'class': 'block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
-        'placeholder': 'Password'
+        'class': _INPUT,
+        'placeholder': 'Password',
+        'autocomplete': 'current-password',
     }))
 
 # Custom Register Form
 class UserRegisterForm(UserCreationForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={
-        'class': 'block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
-        'placeholder': 'Email'
+        'class': _INPUT,
+        'placeholder': 'Email',
     }))
     username = forms.CharField(widget=forms.TextInput(attrs={
-        'class': 'block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
-        'placeholder': 'Username'
+        'class': _INPUT,
+        'placeholder': 'Username',
     }))
     password1 = forms.CharField(widget=forms.PasswordInput(attrs={
-        'class': 'block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
-        'placeholder': 'Password'
+        'class': _INPUT,
+        'placeholder': 'Password',
     }))
     password2 = forms.CharField(widget=forms.PasswordInput(attrs={
-        'class': 'block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500',
-        'placeholder': 'Confirm Password'
+        'class': _INPUT,
+        'placeholder': 'Confirm password',
     }))
 
     class Meta:
@@ -75,7 +79,8 @@ class MediaFileForm(forms.ModelForm):
     label='Upload Media File',
     widget=forms.ClearableFileInput(attrs={
         'name': 'image_file',
-        'accept': 'image/*,video/*,audio/*'
+        'accept': 'image/*,video/*,audio/*',
+        'class': 'form-input',
     })
 )
 
@@ -111,7 +116,8 @@ class MediaImageForm(forms.ModelForm):
     label='Upload Media File',
     widget=forms.ClearableFileInput(attrs={
         'name': 'image_file',
-        'accept': 'image/*'
+        'accept': 'image/*',
+        'class': 'form-input',
     })
 )
 class MediaVideoForm(forms.ModelForm):
@@ -124,7 +130,8 @@ class MediaVideoForm(forms.ModelForm):
     label='Upload Media File',
     widget=forms.ClearableFileInput(attrs={
         'name': 'image_file',
-        'accept': 'video/*'
+        'accept': 'video/*',
+        'class': 'form-input',
     })
 )
 class MediaAudioForm(forms.ModelForm):
@@ -137,6 +144,7 @@ class MediaAudioForm(forms.ModelForm):
     label='Upload Media File',
     widget=forms.ClearableFileInput(attrs={
         'name': 'image_file',
-        'accept': 'audio/*'
+        'accept': 'audio/*',
+        'class': 'form-input',
     })
 )

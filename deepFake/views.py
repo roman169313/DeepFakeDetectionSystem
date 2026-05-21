@@ -312,6 +312,15 @@ def result_detail(request, result_id):
     if not result_id:
         return JsonResponse({"error": "Missing result_id"}, status=400)
     return render(request, 'result_detail.html', {'result': result})
+
+
+def _redirect_after_auth(request, default='front_page'):
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect(default)
+
+
 # Login View
 def user_login_view(request):
     if request.user.is_authenticated:
@@ -322,7 +331,7 @@ def user_login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            return redirect('front_page')
+            return _redirect_after_auth(request)
     else:
         form = UserLoginForm()
     print(form)
@@ -338,7 +347,7 @@ def user_register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)  # Auto login after registration
-            return redirect('front_page')
+            return _redirect_after_auth(request)
     else:
         form = UserRegisterForm()
     print(form)
@@ -347,7 +356,7 @@ def user_register_view(request):
 # Logout View
 def user_logout_view(request):
     logout(request)
-    return redirect('login')
+    return redirect('front_page')
 
 def image_hashing(image_path):
     # Load the image
@@ -423,33 +432,41 @@ def get_image_metadata(image_path):
             metadata[tag_name] = value
     
     return metadata
-@login_required(login_url='login')
 def front_page(request):
+    """Public landing page — no login required."""
     return render(request, 'front_page.html')
 
+
+@login_required(login_url='login')
 def image_upload_page(request):
     form = MediaImageForm()
     if request.method == 'POST':
         form = MediaImageForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-    media_files = MediaFile.objects.all()
+    media_files = MediaFile.objects.filter(user=request.user)
     return render(request, 'image_upload_page.html', {'form': form, 'media_files': media_files})
+
+
+@login_required(login_url='login')
 def audio_upload_page(request):
     form = MediaAudioForm()
     if request.method == 'POST':
         form = MediaAudioForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-    media_files = MediaFile.objects.all()
+    media_files = MediaFile.objects.filter(user=request.user)
     return render(request, 'audio_upload_page.html', {'form': form, 'media_files': media_files})
+
+
+@login_required(login_url='login')
 def video_upload_page(request):
     form = MediaVideoForm()
     if request.method == 'POST':
         form = MediaVideoForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-    media_files = MediaFile.objects.all()
+    media_files = MediaFile.objects.filter(user=request.user)
     return render(request, 'video_upload_page.html', {'form': form, 'media_files': media_files})
 
 def media_api_list(request):
@@ -778,6 +795,9 @@ def visualize_spectrogram(audio_path):
 # views.py
 import uuid
 from django.core.files import File
+
+
+@login_required(login_url='login')
 def media_image(request):
     if request.method == 'POST' and request.FILES.get('file'):
         image_file = request.FILES['file']
@@ -880,6 +900,7 @@ def media_image(request):
                 os.remove(jpeg_path)
             if noise_path and os.path.exists(noise_path):
                 os.remove(noise_path)
+@login_required(login_url='login')
 def media_video(request):
     if request.method == 'POST':
         temp_video_path = None
@@ -945,6 +966,7 @@ def media_video(request):
                 os.remove(temp_video_path)
             if frame_analysis_path and os.path.exists(frame_analysis_path):
                 os.remove(frame_analysis_path)
+@login_required(login_url='login')
 def media_audio(request):
     if request.method == 'POST':
         try:

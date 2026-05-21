@@ -17,12 +17,16 @@ _INCEPTION_BASE = None
 
 
 def _load_keras_model(path):
-    import tensorflow as tf
+    """Load .h5 models saved with Keras 2 / batch_shape via tf-keras when legacy mode is on."""
     try:
-        return tf.keras.models.load_model(path, compile=False)
-    except TypeError:
-        # Fallback if legacy Keras env var is not picked up
-        return tf.keras.models.load_model(path, compile=False, safe_mode=False)
+        import tf_keras
+        return tf_keras.models.load_model(path, compile=False)
+    except ImportError:
+        import tensorflow as tf
+        try:
+            return tf.keras.models.load_model(path, compile=False)
+        except TypeError:
+            return tf.keras.models.load_model(path, compile=False, safe_mode=False)
 
 
 def _get_image_model():

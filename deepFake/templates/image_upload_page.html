@@ -1,88 +1,67 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Deepfake Detection{% endblock %}
+{% block title %}Image detection — DeepGuard{% endblock %}
 {% block content %}
+<div class="upload-page">
+    <div class="container">
+        <header class="upload-header">
+            <h1><i class="fas fa-image" style="color: var(--accent);"></i> Image detection</h1>
+            <p>Upload a photo to run forensic analysis and deep-learning classification.</p>
+        </header>
 
-<div class="min-h-screen flex items-center justify-center">
-    <div class="max-w-4xl mx-auto p-8 bg-white shadow-md rounded-lg form-container"> <!-- Increased max-width -->
-        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Deepfake Detector</h1>
-        <p class="text-gray-600 mb-8 text-center">Upload an image to check for deepfake manipulation.</p>
-
-        <form id="deepfake-upload-form" method="post" enctype="multipart/form-data" class="space-y-6">
-            {% csrf_token %}
-            {{ form.as_p }}
-            {% if form.file.errors %}
-            <div class="text-red-500">{{ form.file.errors }}</div>
-        {% endif %}
-            <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gradient-to-r hover:from-indigo-600 hover:to-pink-600 transition duration-300 flex items-center justify-center">
-                <span id="button-text">Analyze</span>
-                <span id="button-loader" class="hidden ml-2">
-                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                </span>
-            </button>
-        </form>
-
-        <div id="results-container" class="mt-8">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Detection Results</h2>
-            
-            <!-- Preview of uploaded image -->
-            <div id="uploaded-preview" class="hidden mb-6">
-                <h3 class="text-xl font-semibold mb-2">Uploaded Image</h3>
-                <img id="uploaded-image" src="#" alt="Uploaded Image Preview" class="max-w-full h-auto rounded-lg shadow-lg border border-gray-200">
-            </div>
-            
-            <!-- Enhanced Loading Animation -->
-            <div id="wait" class="hidden">
-                <div class="flex flex-col items-center justify-center p-8 space-y-4">
-                    <div class="relative w-20 h-20">
-                        <div class="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
-                        <div class="absolute inset-2 rounded-full border-4 border-purple-500 border-t-transparent animate-spin animation-delay-200"></div>
-                        <div class="absolute inset-4 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin animation-delay-400"></div>
-                    </div>
-                    <p class="text-gray-600 text-center">Scanning image for manipulations...</p>
-                    <p class="text-sm text-gray-400">This may take a few moments</p>
+        <div class="glass-card upload-card">
+            <form id="deepfake-upload-form" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="upload-drop">
+                    <p><i class="fas fa-cloud-arrow-up" style="font-size: 1.5rem; color: var(--accent);"></i></p>
+                    <p>Choose an image file (JPEG, PNG)</p>
+                    {{ form.file }}
+                    {% if form.file.errors %}
+                        <div class="alert-error" style="margin-top: 1rem;">{{ form.file.errors }}</div>
+                    {% endif %}
                 </div>
-            </div>
-            
-            <div id="error" class="p-6 bg-red-100 text-red-500 font-medium rounded-lg hidden"></div>
-            <div id="response" class="hidden">
-                <div id="download-buttons" class="flex justify-between mt-6 mb-8 hidden">
-                    <a href="#" target="_blank" id="pdf-download" 
-                       class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out">
-                        Download report PDF
-                    </a>
-                    
+
+                <div id="uploaded-preview" class="hidden" style="margin-bottom: 1.25rem; text-align: center;">
+                    <img id="uploaded-image" src="#" alt="Preview" style="max-height: 320px; border-radius: 12px; border: 1px solid var(--border);">
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-6">
-                        <div class="p-6 bg-gray-100 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-2">Metadata</h3>
-                            <div id="metadata" class="bg-white p-4 rounded-lg shadow-sm overflow-x-auto"></div>
-                        </div>
 
-                        <div class="p-6 bg-gray-100 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-2">Model Prediction</h3>
-                            <p id="prediction" class="text-lg font-medium bg-white p-4 rounded-lg shadow-sm"></p>
-                        </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    <span id="button-text">Analyze image</span>
+                    <span id="button-loader" class="hidden"><i class="fas fa-circle-notch fa-spin"></i></span>
+                </button>
+            </form>
+
+            <div id="results-container" class="results-panel">
+                <h2>Results</h2>
+                <div id="wait" class="hidden loader-ring">
+                    <div class="loader-ring__spinner"></div>
+                    <p style="color: var(--text-muted); margin: 0;">Scanning for manipulations…</p>
+                </div>
+                <div id="error" class="alert-error hidden"></div>
+                <div id="response" class="hidden">
+                    <div id="download-buttons" class="hidden" style="margin-bottom: 1.25rem;">
+                        <a href="#" id="pdf-download" class="btn btn-secondary"><i class="fas fa-file-pdf"></i> Download PDF</a>
                     </div>
-                    
-                    <div class="space-y-6">
-                        <div class="p-6 bg-gray-100 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-2">Error Level Analysis (ELA)</h3>
-                            <img id="ela-image" src="" alt="ELA Image" class="w-full rounded-lg shadow-sm hover:scale-105 transition-transform duration-300 cursor-zoom-in">
+                    <div class="result-grid">
+                        <div class="result-box">
+                            <h3>Prediction</h3>
+                            <p id="prediction" class="metadata-container"></p>
                         </div>
-
-                        <div class="p-6 bg-gray-100 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-2">JPEG Compression Analysis</h3>
-                            <img id="jpeg-image" src="" alt="JPEG Image" class="w-full rounded-lg shadow-sm hover:scale-105 transition-transform duration-300 cursor-zoom-in">
+                        <div class="result-box">
+                            <h3>Metadata</h3>
+                            <div id="metadata" class="metadata-container"></div>
                         </div>
-
-                        <div class="p-6 bg-gray-100 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-2">Noise Analysis</h3>
-                            <img id="noise-image" src="" alt="Noise Image" class="w-full rounded-lg shadow-sm hover:scale-105 transition-transform duration-300 cursor-zoom-in">
+                        <div class="result-box">
+                            <h3>Error level analysis</h3>
+                            <img id="ela-image" src="" alt="ELA">
+                        </div>
+                        <div class="result-box">
+                            <h3>JPEG compression</h3>
+                            <img id="jpeg-image" src="" alt="JPEG">
+                        </div>
+                        <div class="result-box">
+                            <h3>Noise analysis</h3>
+                            <img id="noise-image" src="" alt="Noise">
                         </div>
                     </div>
                 </div>
@@ -90,96 +69,43 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-    /* Custom animations */
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .animate-spin {
-        animation: spin 1.5s linear infinite;
-    }
-    
-    .animation-delay-200 {
-        animation-delay: 0.2s;
-    }
-    
-    .animation-delay-400 {
-        animation-delay: 0.4s;
-    }
-    
-    /* Smooth transitions */
-    .transition-all {
-        transition-property: all;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 300ms;
-    }
-    
-    td {
-        line-break: anywhere;
-    }
-    
-    /* Image preview styling */
-    #uploaded-image {
-        max-height: 400px;
-        object-fit: contain;
-    }
-    #download-buttons {
-    transition: all 0.3s ease;
-    animation: fadeIn 0.5s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-</style>
-
+{% block extra_scripts %}
 <script>
-    // Show preview of uploaded image
-    document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+    document.querySelector('input[type="file"]')?.addEventListener('change', function(e) {
         const file = e.target.files[0];
-        
         if (file) {
             const reader = new FileReader();
             reader.onload = function(event) {
-                const preview = document.getElementById('uploaded-image');
-                preview.src = event.target.result;
+                document.getElementById('uploaded-image').src = event.target.result;
                 document.getElementById('uploaded-preview').classList.remove('hidden');
-            }
+            };
             reader.readAsDataURL(file);
         }
     });
 
     function formatMetadataAsTable(metadata) {
-        let table = '<table class="min-w-full border-collapse border border-gray-300">';
-        table += '<thead><tr><th class="border border-gray-300 px-4 py-2">Key</th><th class="border border-gray-300 px-4 py-2">Value</th></tr></thead>';
-        table += '<tbody>';
-        
+        let table = '<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">';
+        table += '<thead><tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:0.4rem;color:var(--text-muted);">Key</th><th style="text-align:left;padding:0.4rem;color:var(--text-muted);">Value</th></tr></thead><tbody>';
         for (const [key, value] of Object.entries(metadata)) {
-            table += `<tr><td class="border border-gray-300 px-4 py-2 font-medium">${key}</td><td class="border border-gray-300 px-4 py-2">${value}</td></tr>`;
+            table += `<tr style="border-bottom:1px solid rgba(255,255,255,0.06);"><td style="padding:0.4rem;font-weight:600;">${key}</td><td style="padding:0.4rem;">${value}</td></tr>`;
         }
-        
         table += '</tbody></table>';
         return table;
     }
 
     document.getElementById('deepfake-upload-form').addEventListener('submit', function (e) {
         e.preventDefault();
-
         const formData = new FormData(this);
         formData.append('media_type', 'image');
-        const resultsContainer = document.getElementById('results-container');
         const wait = document.getElementById('wait');
         const responseDiv = document.getElementById('response');
         const errorDiv = document.getElementById('error');
         const buttonText = document.getElementById('button-text');
         const buttonLoader = document.getElementById('button-loader');
 
-        // Show loading states
-        buttonText.textContent = 'Analyzing...';
+        buttonText.textContent = 'Analyzing…';
         buttonLoader.classList.remove('hidden');
         responseDiv.classList.add('hidden');
         errorDiv.classList.add('hidden');
@@ -188,61 +114,41 @@
         fetch('/api/image/', {
             method: 'POST',
             body: formData,
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-            },
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
         })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Full API Response:', data);
-
-            // Reset button state
-            buttonText.textContent = 'Analyze';
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            buttonText.textContent = 'Analyze image';
             buttonLoader.classList.add('hidden');
             wait.classList.add('hidden');
-            responseDiv.classList.remove('hidden');
 
-            if (!data['metadata'] || !data['ela_image_url']) {
+            if (!ok || data.error) {
+                throw new Error(data.error || 'Analysis failed');
+            }
+            if (!data.metadata || !data.ela_image_url) {
                 throw new Error('Invalid API response');
             }
 
-            // Update results
-            const metadataElement = document.getElementById('metadata');
-            if (metadataElement) {
-                metadataElement.innerHTML = formatMetadataAsTable(data.metadata);
-            }
+            responseDiv.classList.remove('hidden');
+            document.getElementById('metadata').innerHTML = formatMetadataAsTable(data.metadata);
+            document.getElementById('ela-image').src = data.ela_image_url;
+            document.getElementById('jpeg-image').src = data.jpeg_image_url;
+            document.getElementById('noise-image').src = data.noise_image_url;
+            const label = data.label || 'Unknown';
+            const conf = data.confidence ?? '—';
+            const pred = document.getElementById('prediction');
+            pred.innerHTML = `<span class="prediction-badge prediction-badge--${label.toLowerCase() === 'real' ? 'real' : 'fake'}">${label}</span> · ${conf}% confidence`;
 
-            const elaImage = document.getElementById('ela-image');
-            const jpegImage = document.getElementById('jpeg-image');
-            const noiseImage = document.getElementById('noise-image');
-
-            if (elaImage) elaImage.src = data['ela_image_url'];
-            if (jpegImage) jpegImage.src = data['jpeg_image_url'];
-            if (noiseImage) noiseImage.src = data['noise_image_url'];
-
-            const predictionElement = document.getElementById('prediction');
-            if (predictionElement) {
-                predictionElement.textContent = `Label: ${data['label']}, Confidence: ${data['confidence'] }%`;
-            }
             if (data.result_id) {
-        const downloadButtons = document.getElementById('download-buttons');
-        const pdfDownload = document.getElementById('pdf-download');
-        
-        pdfDownload.href = `/export/pdf/${data.result_id}`;
-        
-        
-        downloadButtons.classList.remove('hidden');
-    }
-  
+                document.getElementById('pdf-download').href = `/export/pdf/${data.result_id}`;
+                document.getElementById('download-buttons').classList.remove('hidden');
+            }
         })
         .catch(error => {
-            // Reset button state
-            buttonText.textContent = 'Analyze';
+            buttonText.textContent = 'Analyze image';
             buttonLoader.classList.add('hidden');
             wait.classList.add('hidden');
-            
-            // Show error
-            errorDiv.textContent = `Error during analysis: ${error.message}`;
+            errorDiv.textContent = error.message || 'Error during analysis';
             errorDiv.classList.remove('hidden');
         });
     });

@@ -1,156 +1,116 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Deepfake Detection - Audio{% endblock %}
+{% block title %}Audio verification — DeepGuard{% endblock %}
 {% block content %}
-<style>
-    td {
-        line-break: anywhere;
-    }
-    #audio-preview {
-        max-width: 100%;
-        margin-top: 1rem;
-        display: none;
-    }
-    #audio-container {
-        margin-bottom: 1rem;
-    }
-</style>
-<div class=" min-h-screen flex items-center justify-center">
-    <div class="max-w-md mx-auto p-8 bg-white shadow-md rounded-lg form-container">
-        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Deepfake Detector - Audio</h1>
-        <p class="text-gray-600 mb-8 text-center">Upload an audio file to check for deepfake manipulation.</p>
+<div class="upload-page">
+    <div class="container">
+        <header class="upload-header">
+            <h1><i class="fas fa-microphone" style="color: var(--accent-2);"></i> Audio verification</h1>
+            <p>Upload audio to detect synthetic or cloned voices.</p>
+        </header>
 
-        <form id="deepfake-upload-form" method="post" enctype="multipart/form-data" class="space-y-6">
-            {% csrf_token %}
-            {{ form.as_p }}
-            {% if form.file.errors %}
-            <div class="text-red-500">{{ form.file.errors }}</div>
-        {% endif %}
-        <div id="audio-container">
-            <audio id="audio-preview" controls>
-                Your browser does not support the audio element.
-            </audio>
-        </div>
-            <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-lg font-medium hover:bg-gradient-to-r hover:from-indigo-600 hover:to-pink-600 transition duration-300 flex items-center justify-center">
-                <span id="button-text">Analyze</span>
-                <span id="button-loader" class="hidden ml-2">
-                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                </span>
-            </button>
-        </form>
+        <div class="glass-card upload-card">
+            <form id="deepfake-upload-form" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="upload-drop">
+                    <p><i class="fas fa-wave-square" style="font-size: 1.5rem; color: var(--accent-2);"></i></p>
+                    <p>Choose an audio file (MP3, WAV)</p>
+                    {{ form.file }}
+                    {% if form.file.errors %}<div class="alert-error" style="margin-top:1rem;">{{ form.file.errors }}</div>{% endif %}
+                </div>
+                <audio id="audio-preview" controls style="display:none;width:100%;margin-bottom:1rem;"></audio>
+                <button type="submit" class="btn btn-primary" style="width:100%;">
+                    <span id="button-text">Analyze audio</span>
+                    <span id="button-loader" class="hidden"><i class="fas fa-circle-notch fa-spin"></i></span>
+                </button>
+            </form>
 
-        <div id="results-container" class="mt-8 ">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Detection Results</h2>
-            <div id="wait" class="hidden">
-                <div class="flex flex-col items-center justify-center p-8 space-y-4">
-                    <div class="relative w-20 h-20">
-                        <div class="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
-                        <div class="absolute inset-2 rounded-full border-4 border-purple-500 border-t-transparent animate-spin animation-delay-200"></div>
-                        <div class="absolute inset-4 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin animation-delay-400"></div>
+            <div id="results-container" class="results-panel">
+                <h2>Results</h2>
+                <div id="wait" class="hidden loader-ring">
+                    <div class="loader-ring__spinner"></div>
+                    <p style="color:var(--text-muted);margin:0;">Analyzing spectrogram &amp; model…</p>
+                </div>
+                <div id="error" class="alert-error hidden"></div>
+                <div id="response" class="hidden">
+                    <div id="download-buttons" class="hidden" style="margin-bottom:1.25rem;">
+                        <a href="#" id="pdf-download" class="btn btn-secondary"><i class="fas fa-file-pdf"></i> Download PDF</a>
                     </div>
-                    <p class="text-gray-600 text-center">Scanning audio for manipulations...</p>
-                    <p class="text-sm text-gray-400">This may take a few moments</p>
+                    <div class="result-grid">
+                        <div class="result-box">
+                            <h3>Prediction</h3>
+                            <p id="prediction"></p>
+                        </div>
+                        <div class="result-box">
+                            <h3>Waveform</h3>
+                            <img id="waveform-image" src="" alt="Waveform">
+                        </div>
+                        <div class="result-box">
+                            <h3>Spectrogram</h3>
+                            <img id="spectrogram-image" src="" alt="Spectrogram">
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div id="error" class="p-6 bg-red-100 text-red-500 font-medium rounded-lg hidden"></div>
-            <div id="response" class="p-6 bg-gray-100 rounded-lg hidden">
-                <div id="download-buttons" class="flex justify-between mt-6 mb-8 hidden">
-                    <a href="#" target="_blank" id="pdf-download" 
-                       class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out">
-                        Download report PDF
-                    </a>
-                    
-                </div>
-                <h3 class="text-xl font-semibold mb-2">Waveform</h3>
-                <img id="waveform-image" src="" alt="Waveform Image" class="w-full rounded-lg shadow-sm">
-
-                <h3 class="text-xl font-semibold mb-2">Spectrogram</h3>
-                <img id="spectrogram-image" src="" alt="Spectrogram Image" class="w-full rounded-lg shadow-sm">
-
-                <h3 class="text-xl font-semibold mb-2">Model Prediction</h3>
-                <p id="prediction" class="text-lg font-medium"></p>
             </div>
         </div>
-
-        <!-- <div id="uploaded-files-container" class="mt-8">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Uploaded Files</h2>
-            <ul class="list-disc list-inside space-y-2">
-                {% for media in media_files %}
-                <li>
-                    {{ media.media_type }}: <a href="{{ media.file.url }}" class="text-blue-500 hover:underline">{{ media.file.name }}</a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div> -->
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
-    // Add event listener for file input change to show audio preview
-    document.getElementById('id_file').addEventListener('change', function(e) {
+    document.querySelector('input[type="file"]')?.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file && file.type.includes('audio')) {
-            const audioPreview = document.getElementById('audio-preview');
-            const audioURL = URL.createObjectURL(file);
-            
-            audioPreview.src = audioURL;
-            audioPreview.style.display = 'block';
+            const a = document.getElementById('audio-preview');
+            a.src = URL.createObjectURL(file);
+            a.style.display = 'block';
         }
     });
+
     document.getElementById('deepfake-upload-form').addEventListener('submit', function (e) {
         e.preventDefault();
-
         const formData = new FormData(this);
-        formData.append('media_type', 'audio'); // Ensure the media type is set to audio
-        const resultsContainer = document.getElementById('results-container');
+        formData.append('media_type', 'audio');
         const wait = document.getElementById('wait');
         const responseDiv = document.getElementById('response');
         const errorDiv = document.getElementById('error');
         const buttonText = document.getElementById('button-text');
         const buttonLoader = document.getElementById('button-loader');
 
-        // Show loading states
-        buttonText.textContent = 'Analyzing...';
+        buttonText.textContent = 'Analyzing…';
         buttonLoader.classList.remove('hidden');
-        // resultsContainer.classList.add('hidden');
         responseDiv.classList.add('hidden');
         errorDiv.classList.add('hidden');
         wait.classList.remove('hidden');
+
         fetch('/api/audio/', {
             method: 'POST',
             body: formData,
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-            },
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
         })
-        .then(response => response.json())
-        .then(data => {
-            buttonText.textContent = 'Analyze';
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            buttonText.textContent = 'Analyze audio';
             buttonLoader.classList.add('hidden');
             wait.classList.add('hidden');
+            if (!ok || data.error) throw new Error(data.error || 'Analysis failed');
             responseDiv.classList.remove('hidden');
-            // resultsContainer.classList.remove('hidden');
             document.getElementById('waveform-image').src = data.waveform_url;
             document.getElementById('spectrogram-image').src = data.spectrogram_url;
-            document.getElementById('prediction').textContent = `Label: ${data.label}, Confidence: ${data.confidence}%`;
+            const label = data.label || '—';
+            document.getElementById('prediction').innerHTML =
+                `<span class="prediction-badge prediction-badge--${String(label).toLowerCase().includes('bona') ? 'real' : 'fake'}">${label}</span> · ${data.confidence}%`;
             if (data.result_id) {
-        const downloadButtons = document.getElementById('download-buttons');
-        const pdfDownload = document.getElementById('pdf-download');
-        
-        pdfDownload.href = `/export/pdf/${data.result_id}`;
-        
-        
-        downloadButtons.classList.remove('hidden');
-    }
+                document.getElementById('pdf-download').href = `/export/pdf/${data.result_id}`;
+                document.getElementById('download-buttons').classList.remove('hidden');
+            }
         })
-        .catch(error => {
-            buttonText.textContent = 'Analyze';
+        .catch(err => {
+            buttonText.textContent = 'Analyze audio';
             buttonLoader.classList.add('hidden');
             wait.classList.add('hidden');
-            errorDiv.textContent = `Error during analysis: ${error.message}`;
+            errorDiv.textContent = err.message;
             errorDiv.classList.remove('hidden');
         });
     });

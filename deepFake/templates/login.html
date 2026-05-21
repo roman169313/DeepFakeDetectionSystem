@@ -1,60 +1,44 @@
 {% extends 'base.html' %}
-{% block title %}Login{% endblock %}
+{% block title %}Sign in — DeepGuard{% endblock %}
 {% block content %}
-<div class="flex items-center justify-center min-h-screen form-container">
-    <div
-      class="w-full max-w-md p-8 space-y-6 bg-gray-800 rounded shadow-lg"
-    >
-      <h2 class="text-center text-3xl font-extrabold text-white">
-        Sign in to DeepFake Detection
-      </h2>
+<div class="auth-page">
+    <div class="glass-card auth-card">
+        <h1>Welcome back</h1>
+        <p class="auth-sub">Sign in to run image, video, and audio detection.</p>
 
-      <!-- Display messages if any -->
-      {% if messages %} {% for message in messages %}
-      <div class="p-3 rounded text-white bg-{{ message.tags }}-500">
-        {{ message }}
-      </div>
-      {% endfor %} {% endif %}
-
-      <form method="POST">
-        {% csrf_token %}
-        <div class="rounded-md shadow-sm -space-y-px">
-          <div class="mb-4">
-            <label for="id_username" class="sr-only">Username</label>
-            {{ form.username }}
-          </div>
-          <div class="mb-4">
-            <label for="id_password" class="sr-only">Password</label>
-            {{ form.password }}
-          </div>
-        </div>
-       
-    {% if form.errors %}
-    <div class="p-3 rounded bg-red-500 text-white">
-        {% for field, errors in form.errors.items %}
-            {% for error in errors %}
-                <p>{{ error }}</p>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="form-error">{{ message }}</div>
             {% endfor %}
-        {% endfor %}
-    </div>
-{% endif %}
+        {% endif %}
 
+        <form method="post">
+            {% csrf_token %}
+            {% if request.GET.next %}
+                <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% endif %}
 
-        <button
-          type="submit"
-          class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Login
-        </button>
-        <p class="mt-4 text-center text-sm">
-          Don't have an account?
-          <a
-            href="{% url 'register' %}"
-            class="font-medium text-blue-400 hover:text-blue-500"
-            >Register here</a
-          >
+            {% if form.errors %}
+                <div class="form-error">Invalid username or password.</div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="id_username">Username</label>
+                {{ form.username }}
+            </div>
+            <div class="form-group">
+                <label for="id_password">Password</label>
+                {{ form.password }}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                <i class="fas fa-sign-in-alt"></i> Sign in
+            </button>
+        </form>
+
+        <p class="auth-footer">
+            No account? <a href="{% url 'register' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">Create one</a>
         </p>
-      </form>
     </div>
-  </div>
+</div>
 {% endblock %}

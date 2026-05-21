@@ -1,49 +1,47 @@
 {% extends 'base.html' %}
-
+{% block title %}History — DeepGuard{% endblock %}
 {% block content %}
-<div class="  min-h-screen flex items-center justify-center">
-    <div class="max-w-2xl p-8 bg-white shadow-md rounded-lg form-container">
+<div class="upload-page">
+    <div class="container">
+        <header class="upload-header">
+            <h1><i class="fas fa-history" style="color: var(--accent);"></i> Analysis history</h1>
+            <p>Your past image, video, and audio detections.</p>
+        </header>
 
-        <!-- Title -->
-        <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">Analysis History</h2>
-
-        <!-- Table -->
-        <div class="overflow-x-auto">
-            <table class="w-full border-collapse bg-white shadow-md rounded-lg overflow-hidden">
-                <thead class="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                    <tr>
-                        <th class="py-3 px-4 text-left">File</th>
-                        <th class="py-3 px-4 text-left">Type</th>
-                        <th class="py-3 px-4 text-left">Prediction</th>
-                        <th class="py-3 px-4 text-left">Confidence</th>
-                        <th class="py-3 px-4 text-left">Date</th>
-                        <th class="py-3 px-4 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-700">
-                    {% for result in results %}
-                    <tr class="border-b hover:bg-gray-100 transition">
-                        <td class="py-3 px-4">{{ result.media_file.file.name }}</td>
-                        <td class="py-3 px-4">{{ result.get_media_type_display }}</td>
-                        <td class="py-3 px-4">{{ result.prediction }}</td>
-                        <td class="py-3 px-4">{{ result.confidence|floatformat:2 }}%</td>
-                        <td class="py-3 px-4">{{ result.created_at|date:"Y-m-d H:i" }}</td>
-                        <td class="py-3 px-4 text-center">
-                            <a href="{% url 'result_detail' result.id %}" 
-                               class="bg-blue-500 text-white py-2 px-4 rounded-md text-sm font-semibold hover:bg-blue-700 transition">
-                                View Details
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center py-4 text-gray-500">No analysis results found</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="glass-card upload-card" style="max-width: 100%;">
+            <div style="overflow-x: auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); color:var(--text-muted); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05em;">
+                            <th style="text-align:left;padding:0.75rem;">File</th>
+                            <th style="text-align:left;padding:0.75rem;">Type</th>
+                            <th style="text-align:left;padding:0.75rem;">Prediction</th>
+                            <th style="text-align:left;padding:0.75rem;">Confidence</th>
+                            <th style="text-align:left;padding:0.75rem;">Date</th>
+                            <th style="text-align:center;padding:0.75rem;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <td style="padding:0.75rem;">{{ result.file.name|truncatechars:40 }}</td>
+                            <td style="padding:0.75rem;">{{ result.get_media_type_display }}</td>
+                            <td style="padding:0.75rem;">{{ result.prediction|default:"—" }}</td>
+                            <td style="padding:0.75rem;">{{ result.confidence|floatformat:1 }}%</td>
+                            <td style="padding:0.75rem;">{{ result.uploaded_at|date:"Y-m-d H:i" }}</td>
+                            <td style="padding:0.75rem;text-align:center;">
+                                <a href="{% url 'result_detail' result.id %}" class="btn btn-secondary" style="padding:0.35rem 0.75rem;font-size:0.8rem;">View</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="padding:2rem;text-align:center;color:var(--text-muted);">No results yet. <a href="{% url 'image_upload_page' %}" style="color:var(--accent-2);">Analyze media</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-
     </div>
 </div>
 {% endblock %}

@@ -27,6 +27,7 @@ module.exports = {
         DJANGO_SETTINGS_MODULE: "deepFakeDetection.settings",
         TF_USE_LEGACY_KERAS: "1",
         TF_ENABLE_ONEDNN_OPTS: "0",
+        TF_CPP_MIN_LOG_LEVEL: "2",
       },
       env_file: "/var/www/deepfake/DeepFakeDetectionSystem/.env",
     },
