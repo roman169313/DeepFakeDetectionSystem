@@ -1,8 +1,17 @@
 # Deep Fake Detection System — production dependencies
-# Python 3.10–3.12 recommended (Django 5.1 + TensorFlow 2.15)
+#
+# REQUIRES Python 3.10, 3.11, or 3.12 (Django 5.1 will NOT install on 3.9 or older).
+# Check: python3 --version
+#
+# If pip says "No matching distribution found for Django==5.1.5":
+#   rm -rf venv && python3.11 -m venv venv && source venv/bin/activate
+#   python -m pip install --upgrade pip
+#   pip install -r requirements.txt
+#
+# Stuck on Python 3.9 only? Use: pip install -r requirements-py39.txt
 #
 # Install:
-#   python -m venv venv
+#   python3.11 -m venv venv
 #   source venv/bin/activate   # Linux/macOS
 #   pip install -r requirements.txt
 #

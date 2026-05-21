@@ -21,7 +21,7 @@ APP_DIR="${APP_DIR:-/var/www/deepfake/DeepFakeDetectionSystem}"
 GUNICORN_BIND="${GUNICORN_BIND:-127.0.0.1:8000}"
 NGINX_SERVER_NAME="${NGINX_SERVER_NAME:-deepfake.yourdomain.com}"
 SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-deepfake}"
-PYTHON="${PYTHON:-python3}"
+PYTHON="${PYTHON:-}"
 
 # =============================================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,6 +29,30 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 log() { echo "[deploy] $*"; }
 die() { echo "[deploy] ERROR: $*" >&2; exit 1; }
+
+# Django 5.1 needs Python 3.10+ (default python3 on older VPS is often 3.6/3.9)
+find_python() {
+  if [[ -n "${PYTHON}" ]]; then
+    "${PYTHON}" -c 'import sys; assert sys.version_info >= (3, 10)' 2>/dev/null \
+      || die "${PYTHON} is too old — need Python 3.10+. Set PYTHON=python3.11"
+    log "Using Python: ${PYTHON} ($(${PYTHON} --version))"
+    return
+  fi
+  local candidate
+  for candidate in python3.12 python3.11 python3.10; do
+    if command -v "${candidate}" >/dev/null 2>&1 \
+        && "${candidate}" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+      PYTHON="${candidate}"
+      log "Using Python: ${PYTHON} ($(${PYTHON} --version))"
+      return
+    fi
+  done
+  die "Python 3.10+ not found. Install python3.11 then rerun.
+
+  Ubuntu/Debian:  sudo apt install python3.11 python3.11-venv python3.11-dev
+  Alma/RHEL/CentOS: sudo dnf install python3.11 python3.11-devel
+  Or use Python 3.9 fallback: pip install -r requirements-py39.txt"
+}
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Missing command: $1"
@@ -54,16 +78,37 @@ render_template() {
 }
 
 install_system_packages() {
-  log "Installing system packages (apt)..."
-  as_root apt-get update -qq
-  as_root apt-get install -y \
-    "${PYTHON}" "${PYTHON}-venv" "${PYTHON}-pip" "${PYTHON}-dev" \
-    build-essential pkg-config \
-    libmysqlclient-dev \
-    ffmpeg libsndfile1 libsndfile1-dev \
-    libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
-    libimage-exiftool-perl exiv2 \
-    nginx
+  find_python
+  if command -v apt-get >/dev/null 2>&1; then
+    log "Installing system packages (apt)..."
+    as_root apt-get update -qq
+    as_root apt-get install -y \
+      "${PYTHON}" "${PYTHON}-venv" "${PYTHON}-dev" \
+      build-essential pkg-config \
+      libmysqlclient-dev \
+      ffmpeg libsndfile1 libsndfile1-dev \
+      libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+      libimage-exiftool-perl exiv2 \
+      nginx
+  elif command -v dnf >/dev/null 2>&1; then
+    log "Installing system packages (dnf)..."
+    as_root dnf install -y \
+      "${PYTHON}" "${PYTHON}-devel" \
+      gcc gcc-c++ make pkgconfig \
+      mariadb-devel \
+      ffmpeg libsndfile \
+      mesa-libGL glib2 \
+      perl-Image-ExifTool \
+      nginx
+  elif command -v yum >/dev/null 2>&1; then
+    log "Installing system packages (yum)..."
+    as_root yum install -y \
+      "${PYTHON}" "${PYTHON}-devel" \
+      gcc make \
+      mariadb-devel ffmpeg nginx
+  else
+    die "No supported package manager (apt/dnf/yum). Install Python 3.11+ manually."
+  fi
   log "System packages installed."
 }
 
@@ -92,16 +137,28 @@ ensure_env_file() {
 }
 
 setup_venv_and_deps() {
+  find_python
   log "Setting up Python venv in ${APP_DIR}..."
   cd "${APP_DIR}"
+  if [[ -d venv ]]; then
+    if ! venv/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' 2>/dev/null; then
+      log "Removing old venv (Python < 3.10)..."
+      rm -rf venv
+    fi
+  fi
   if [[ ! -d venv ]]; then
     "${PYTHON}" -m venv venv
   fi
   # shellcheck disable=SC1091
   source venv/bin/activate
-  pip install --upgrade pip wheel
-  pip install -r requirements.txt
-  log "Python dependencies installed."
+  python -m pip install --upgrade pip wheel
+  if python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then
+    python -m pip install -r requirements.txt
+  else
+    log "Python < 3.10 — installing requirements-py39.txt (Django 4.2)"
+    python -m pip install -r requirements-py39.txt
+  fi
+  log "Python dependencies installed ($(python --version))."
 }
 
 django_prepare() {
@@ -207,7 +264,7 @@ main() {
       install_nginx
       ;;
     --full)
-      need_cmd "${PYTHON}"
+      find_python
       install_system_packages
       ensure_app_dir
       sync_code

@@ -4,10 +4,35 @@ Runs **beside** Node/PM2 apps on port **8000** (localhost only). PM2 is not used
 
 ## Prerequisites
 
-- Ubuntu 22.04+ VPS
+- **Python 3.10, 3.11, or 3.12** (required for `requirements.txt` / Django 5.1)
 - MySQL database `ml_db` and user created
 - Domain/subdomain DNS pointing to the VPS (for Nginx + HTTPS)
 - ML `.h5` files in `deepFake/mlModel/`
+
+### Fix: `No matching distribution found for Django==5.1.5`
+
+Your venv was created with **old Python** (3.6/3.8/3.9). Django 5.1 needs **3.10+**.
+
+```bash
+python3 --version          # if < 3.10, install 3.11:
+# Alma/RHEL/CentOS:
+sudo dnf install python3.11 python3.11-devel
+# Ubuntu/Debian:
+sudo apt install python3.11 python3.11-venv python3.11-dev
+
+cd /var/www/deepfake/DeepFakeDetectionSystem
+rm -rf venv
+python3.11 -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+**Cannot upgrade Python?** Use Django 4.2 on Python 3.9:
+
+```bash
+pip install -r requirements-py39.txt
+```
 
 ## Quick start
 
