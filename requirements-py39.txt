@@ -12,6 +12,7 @@ python-dotenv==1.0.1
 whitenoise==6.8.2
 
 tensorflow==2.15.1
+# After install, legacy Keras for .h5 models: export TF_USE_LEGACY_KERAS=1
 numpy>=1.26.4,<2.0
 
 opencv-python-headless==4.10.0.84

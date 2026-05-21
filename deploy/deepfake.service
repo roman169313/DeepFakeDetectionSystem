@@ -13,6 +13,8 @@ Group=@APP_GROUP@
 WorkingDirectory=@APP_DIR@
 EnvironmentFile=@APP_DIR@/.env
 Environment=PATH=@APP_DIR@/venv/bin
+Environment=TF_USE_LEGACY_KERAS=1
+Environment=TF_ENABLE_ONEDNN_OPTS=0
 
 ExecStart=@APP_DIR@/venv/bin/gunicorn deepFakeDetection.wsgi:application \
     --bind @GUNICORN_BIND@ \

@@ -190,7 +190,7 @@ INTERNAL_IPS = [
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
-    BASE_DIR / 'static',
+    BASE_DIR / 'deepFake' / 'static',
 ]
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
