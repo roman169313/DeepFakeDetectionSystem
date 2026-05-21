@@ -89,6 +89,38 @@ def _load_keras_model(path):
     )
 
 
+def _build_video_model():
+    """
+    Rebuild the connected subgraph from deepfake_detection_model.h5.
+
+    The saved Functional model lists two inputs but only wires input_3
+    (20×2048 features); input_4 (auxiliary) is orphaned, so keras.models.load_model
+    fails on Keras 3 with "inputs not connected to outputs".
+    """
+    import keras
+    from keras import layers
+
+    inp = layers.Input(shape=(20, 2048), name='input_3')
+    x = layers.GRU(16, return_sequences=True, name='gru')(inp)
+    x = layers.GRU(8, name='gru_1')(x)
+    x = layers.Dropout(0.5, name='dropout')(x)
+    x = layers.Dense(8, activation='relu', name='dense')(x)
+    out = layers.Dense(2, activation='softmax', name='dense_1')(x)
+    return keras.Model(inp, out)
+
+
+def _load_video_model(path):
+    """Video .h5 has a disconnected second input; fall back to rebuild + weights."""
+    try:
+        return _load_keras_model(path)
+    except RuntimeError:
+        pass
+
+    model = _build_video_model()
+    model.load_weights(path)
+    return model
+
+
 def _get_image_model():
     if 'image' not in _MODELS:
         _MODELS['image'] = _load_keras_model(settings.MODEL_PATHS['image_model'])
@@ -103,7 +135,7 @@ def _get_audio_model():
 
 def _get_video_model():
     if 'video' not in _MODELS:
-        _MODELS['video'] = _load_keras_model(settings.MODEL_PATHS['video_model'])
+        _MODELS['video'] = _load_video_model(settings.MODEL_PATHS['video_model'])
     return _MODELS['video']
 
 
@@ -166,8 +198,7 @@ def extract_features(frames, base_model):
 def detect_video(video_path):
     frames = preprocess_video(video_path)
     features = extract_features(frames, _get_inception_base())
-    auxiliary_data = np.zeros((1, 20))
-    predictions = _get_video_model().predict([features, auxiliary_data], verbose=0)
+    predictions = _get_video_model().predict(features, verbose=0)
     threshold = 0.5
     predicted_label = "FAKE" if predictions[0][1] > threshold else "REAL"
     return predicted_label, predictions[0]
