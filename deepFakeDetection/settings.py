@@ -12,26 +12,42 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+import sys
+
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env')
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    return os.environ.get(name, str(default)).lower() in ('true', '1', 'yes')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ftsm$17tc@ydhkn(^s&+#p5ld5jlk!(1jun&k6%ld^auyguk_t'
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-ftsm$17tc@ydhkn(^s&+#p5ld5jlk!(1jun&k6%ld^auyguk_t',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env_bool('DJANGO_DEBUG', default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+    if host.strip()
+]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'livereload',
     'deepFake',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -39,9 +55,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'tailwind',
-    'django_browser_reload'
 ]
+
+if DEBUG:
+    INSTALLED_APPS += [
+        'livereload',
+        'tailwind',
+        'django_browser_reload',
+    ]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -49,15 +70,18 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'livereload.middleware.LiveReloadScript',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "django_browser_reload.middleware.BrowserReloadMiddleware",
 ]
+
+if DEBUG:
+    MIDDLEWARE.insert(2, 'livereload.middleware.LiveReloadScript')
+    MIDDLEWARE.append('django_browser_reload.middleware.BrowserReloadMiddleware')
 
 ROOT_URLCONF = 'deepFakeDetection.urls'
 
@@ -93,11 +117,11 @@ WSGI_APPLICATION = 'deepFakeDetection.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ml_db',  # Replace with your database name
-        'USER': 'root',  # Replace with your MySQL username
-        'PASSWORD': 'admin',  # Replace with your MySQL password
-        'HOST': '127.0.0.1',  # Use '127.0.0.1' if localhost doesn't work
-        'PORT': '3306',  # Default MySQL port
+        'NAME': os.environ.get('DB_NAME', 'ml_db'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'admin'),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
         },
@@ -168,5 +192,19 @@ MODEL_PATHS = {
     'audio_model': os.path.join(MODELS_DIR, 'deep_fake_audio_detector.h5'),
 }
 
-# Exiftool path
-EXIFTOOL_PATH = os.path.join(MODELS_DIR, 'exiftool.exe')
+# Exiftool: bundled .exe on Windows, system binary on Linux (apt: libimage-exiftool-perl)
+if os.environ.get('EXIFTOOL_PATH'):
+    EXIFTOOL_PATH = os.environ['EXIFTOOL_PATH']
+elif sys.platform == 'win32':
+    EXIFTOOL_PATH = os.path.join(MODELS_DIR, 'exiftool.exe')
+else:
+    EXIFTOOL_PATH = 'exiftool'
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}

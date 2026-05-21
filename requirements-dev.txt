@@ -1,0 +1,6 @@
+# Development-only — do not install on production VPS
+-r requirements.txt
+
+django-browser-reload==1.17.0
+django-livereload==1.8.1
+django-tailwind==3.8.0

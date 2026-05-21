@@ -10,10 +10,20 @@ from django.conf import settings
 image_model_path = settings.MODEL_PATHS['image_model']
 video_model_path = settings.MODEL_PATHS['video_model']
 audio_model_path = settings.MODEL_PATHS['audio_model']
-# Load the models
+# Load the models once at startup (avoid reloading per request)
 image_model = tf.keras.models.load_model(image_model_path)
 audio_model = tf.keras.models.load_model(audio_model_path)
 video_model = tf.keras.models.load_model(video_model_path)
+
+_inception_base = None
+
+
+def _get_inception_base():
+    """Reuse InceptionV3 weights in memory instead of reloading every video."""
+    global _inception_base
+    if _inception_base is None:
+        _inception_base = InceptionV3(include_top=False, weights='imagenet', pooling='avg')
+    return _inception_base
 
 
 # ======================
@@ -120,15 +130,12 @@ def detect_video(video_path):
     print(video_path)
     frames = preprocess_video(video_path)
 
-    # Load pre-trained InceptionV3 for feature extraction
-    base_model = InceptionV3(include_top=False, weights='imagenet', pooling='avg')
+    base_model = _get_inception_base()
     features = extract_features(frames, base_model)
 
     # Prepare auxiliary input (dummy data in this case)
     auxiliary_data = np.zeros((1, 20))
 
-    # Load video model and predict
-    video_model = tf.keras.models.load_model(video_model_path)
     predictions = video_model.predict([features, auxiliary_data])
 
     # Post-process predictions

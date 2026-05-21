@@ -1,0 +1,31 @@
+# systemd unit for Deep Fake Detection (Django + Gunicorn)
+# Placeholders @APP_DIR@, @APP_USER@, @GUNICORN_BIND@ are replaced by deploy/deploy.sh
+
+[Unit]
+Description=Deep Fake Detection (Django/Gunicorn)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=@APP_USER@
+Group=@APP_GROUP@
+WorkingDirectory=@APP_DIR@
+EnvironmentFile=@APP_DIR@/.env
+Environment=PATH=@APP_DIR@/venv/bin
+
+ExecStart=@APP_DIR@/venv/bin/gunicorn deepFakeDetection.wsgi:application \
+    --bind @GUNICORN_BIND@ \
+    --workers 1 \
+    --threads 2 \
+    --timeout 300 \
+    --access-logfile - \
+    --error-logfile -
+
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

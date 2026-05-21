@@ -55,10 +55,29 @@ venv\Scripts\activate        # for Windows
 
 pip install -r requirements.txt
 
+# Optional — live reload / tailwind dev tools (not for production VPS):
+# pip install -r requirements-dev.txt
 
+# Optional — copy environment template:
+# cp .env.example .env
 
 python manage.py migrate
-
-
+python manage.py collectstatic --noinput
 
 python manage.py runserver
+```
+
+---
+
+### 🖥️ VPS deployment (with Node/PM2 on same server)
+
+Uses **Gunicorn + systemd + Nginx** on port `8000` — does not use or change PM2.
+
+See **[deploy/README.md](deploy/README.md)** for full steps.
+
+```bash
+chmod +x deploy/deploy.sh
+export NGINX_SERVER_NAME=deepfake.yourdomain.com
+cp .env.example .env   # set DJANGO_DEBUG=False and DB credentials
+./deploy/deploy.sh --full
+```
