@@ -4,8 +4,8 @@ management commands (migrate, createsuperuser) work without loading TensorFlow.
 """
 import os
 
-# Keras 2 compatibility for .h5 models saved with batch_shape (TF 2.15+ / Keras 3)
 os.environ.setdefault('TF_USE_LEGACY_KERAS', '1')
+os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
 
 import numpy as np
 import cv2
@@ -14,19 +14,73 @@ from django.conf import settings
 
 _MODELS = {}
 _INCEPTION_BASE = None
+_LEGACY_OBJECTS = None
+
+
+def _legacy_custom_objects():
+    """Keras 3 / tf_keras reject batch_shape; old .h5 files still use it."""
+    global _LEGACY_OBJECTS
+    if _LEGACY_OBJECTS is not None:
+        return _LEGACY_OBJECTS
+
+    BaseInput = None
+    for mod_path in ('tf_keras.layers', 'keras.layers', 'tensorflow.keras.layers'):
+        try:
+            mod = __import__(mod_path, fromlist=['InputLayer'])
+            BaseInput = mod.InputLayer
+            break
+        except ImportError:
+            continue
+
+    if BaseInput is None:
+        _LEGACY_OBJECTS = {}
+        return _LEGACY_OBJECTS
+
+    class LegacyInputLayer(BaseInput):
+        @classmethod
+        def from_config(cls, config):
+            config = dict(config)
+            if 'batch_shape' in config and 'batch_input_shape' not in config:
+                config['batch_input_shape'] = config.pop('batch_shape')
+            elif 'batch_shape' in config:
+                config.pop('batch_shape', None)
+            return super().from_config(config)
+
+    _LEGACY_OBJECTS = {'InputLayer': LegacyInputLayer}
+    return _LEGACY_OBJECTS
 
 
 def _load_keras_model(path):
-    """Load .h5 models saved with Keras 2 / batch_shape via tf-keras when legacy mode is on."""
+    custom_objects = _legacy_custom_objects()
+    errors = []
+
     try:
         import tf_keras
-        return tf_keras.models.load_model(path, compile=False)
-    except ImportError:
+        return tf_keras.models.load_model(
+            path, compile=False, custom_objects=custom_objects,
+        )
+    except Exception as exc:
+        errors.append(f'tf_keras: {exc}')
+
+    try:
         import tensorflow as tf
+        return tf.keras.models.load_model(
+            path, compile=False, custom_objects=custom_objects,
+        )
+    except TypeError:
         try:
-            return tf.keras.models.load_model(path, compile=False)
-        except TypeError:
-            return tf.keras.models.load_model(path, compile=False, safe_mode=False)
+            import tensorflow as tf
+            return tf.keras.models.load_model(
+                path, compile=False, custom_objects=custom_objects, safe_mode=False,
+            )
+        except Exception as exc2:
+            errors.append(f'tf.keras safe_mode=False: {exc2}')
+    except Exception as exc:
+        errors.append(f'tf.keras: {exc}')
+
+    raise RuntimeError(
+        'Could not load Keras model. ' + ' | '.join(errors)
+    )
 
 
 def _get_image_model():
@@ -50,17 +104,25 @@ def _get_video_model():
 def _get_inception_base():
     global _INCEPTION_BASE
     if _INCEPTION_BASE is None:
-        from tensorflow.keras.applications import InceptionV3
+        try:
+            from tf_keras.applications import InceptionV3
+        except ImportError:
+            from tensorflow.keras.applications import InceptionV3
         _INCEPTION_BASE = InceptionV3(include_top=False, weights='imagenet', pooling='avg')
     return _INCEPTION_BASE
 
 
 def check_fake_or_real(file_path):
-    import tensorflow as tf
-    img = tf.keras.preprocessing.image.load_img(file_path, target_size=(224, 224))
-    img_array = tf.keras.preprocessing.image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0) / 255.0
+    try:
+        from tf_keras.preprocessing import image as keras_image
+        img = keras_image.load_img(file_path, target_size=(224, 224))
+        img_array = keras_image.img_to_array(img)
+    except ImportError:
+        import tensorflow as tf
+        img = tf.keras.preprocessing.image.load_img(file_path, target_size=(224, 224))
+        img_array = tf.keras.preprocessing.image.img_to_array(img)
 
+    img_array = np.expand_dims(img_array, axis=0) / 255.0
     prediction = _get_image_model().predict(img_array, verbose=0)
     label = "Real" if prediction[0] >= 0.5 else "Fake"
     return label, prediction[0]
