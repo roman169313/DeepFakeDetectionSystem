@@ -13,7 +13,6 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from skimage.util import random_noise
-import pyexiv2
 import imagehash
 from PIL import Image
 from PIL.ExifTags import TAGS
