@@ -81,3 +81,4 @@ export NGINX_SERVER_NAME=deepfake.yourdomain.com
 cp .env.example .env   # set DJANGO_DEBUG=False and DB credentials
 ./deploy/deploy.sh --full
 ```
+Live Link: https://deepfake.softheight.com/
